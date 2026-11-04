@@ -427,7 +427,7 @@ const learnList=()=>`<div class="stack">${LEARN.map(a=>`<button class="opt" data
 const todaysRead=()=>LEARN[Math.floor(T0/DAY)%LEARN.length];
 /* ---------- State (example user, marked as sample) ---------- */
 const state = {
-  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true,
+  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true, ckLog:[],
   joints:{knee:false,shoulder:false,back:false,bone:false},
   swaps:{},
   history:[],
@@ -543,8 +543,8 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{ckLog:Array.isArray(s.ckLog)?s.ckLog:[],ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({ckLog:state.ckLog,ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
 
 const COACH={ok:false,reason:''};
 if(NATIVE){ withTimeout(nat('VitalCoach','availability',{}),4000).then(r=>{COACH.ok=!!(r&&r.available); COACH.reason=(r&&r.reason)||''; if(!state.player&&$('#sheet').hidden) render();}).catch(()=>{}); }
@@ -559,9 +559,11 @@ function cleanAI(t,max){ if(typeof t!=='string') return null; t=t.replace(/\s+/g
 
 /* 1. Coach note before the session */
 function noteFacts(P){ const f=[`Session: ${TN(P.s)}, about ${minutes(P.s)} minutes.`];
-  if(P.noImpact) f.push('She reported period pain or heavy bleeding, so there is no impact work today and two sets per exercise.');
+  if(P.calm) f.push('She feels stressed or low, so there is no impact work, rests are longer and the session ends with slow breathing.');
+  if(P.periodCk) f.push('She reported period pain or heavy bleeding, so there is no impact work today and two sets per exercise.');
   else if(P.tiredCk) f.push('She reported low energy or poor sleep, so today is a light day: two sets per exercise at last time’s weights.');
   if(P.cool) f.push('She feels hot or has hot flushes, so rests are longer and there is no cardio finisher.');
+  if(P.strong&&!P.light) f.push('She feels strong today, so the main lifts get one extra set, and the weight goes up a step where she was close to the top of the range last time.');
   if(P.len) f.push('She is short on time, so this is the 20-minute version.');
   const sore=['knee','shoulder','back'].filter(j=>P.sore[j]); if(sore.length) f.push(`Gentler versions are swapped in for her ${sore.join(' and ').replace('back','lower back')}.`);
   if(P.back) f.push('She is coming back after a break of ten days or more, so weights start about 15% lighter.');
@@ -581,6 +583,9 @@ function hurtSheet(i,msg){ const P=state.player, r=resolve(exFor(P.s)[i]);
    <p class="muted">Tell VitalHer in your own words, or tap an area. It swaps in gentler versions for the rest of today.</p>
    <label for="hurt-text" class="small"><b>In your own words</b></label>
    <textarea id="hurt-text" class="ta" rows="3" placeholder="For example: my left knee aches at the bottom of the squat"></textarea>
+   <label for="hurt-level" class="small"><b>How much does it hurt?</b> <span class="num" id="hurt-lv">4</span> out of 10</label>
+   <input type="range" id="hurt-level" min="0" max="10" step="1" value="4" style="width:100%;accent-color:var(--accent)">
+   <div class="bandlbl"><span>0–3 lighter weight</span><span>4–6 swap</span><span>7–10 skip</span></div>
    <button class="btn primary" data-act="hurtgo" data-i="${i}">Find a gentler version</button>
    <div class="ckgrid">${Object.keys(AREA).map(j=>`<button class="opt" data-act="hurtpick" data-i="${i}" data-j="${j}"><b>${AREA[j]}</b></button>`).join('')}</div>
    <p class="muted small">Sharp pain is a signal to stop that exercise. If pain lasts more than a few days, see a doctor or physiotherapist.</p>
@@ -592,14 +597,21 @@ async function hurtGo(i){ const P=state.player, box=$('#hurt-text'), text=box?bo
     try{ const r=await withTimeout(nat('VitalCoach','swap',{text,exercises:names}),15000);
       if(r&&AREA[r.joint]){ j=r.joint; ai=true; } const k=r?names.indexOf(r.exercise):-1; if(k>-1) idx=k; const c=cleanAI(r&&r.reply,160); if(c){ reply=c; ai=true; } }catch(e){} }
   if(!j) return hurtSheet(i,'VitalHer couldn’t tell which area. Tap one below.');
-  applySore(j,idx,reply,ai); }
-function applySore(j,i,reply,ai){ const P=state.player; if(!P) return; P.sore[j]=true;
+  applySore(j,idx,reply,ai,hurtLevel()); }
+function hurtLevel(){ const el=$('#hurt-level'); return el?+el.value:5; }
+function applySore(j,i,reply,ai,level){ const P=state.player; if(!P) return; level=level==null?5:level;
+  const e0=exFor(P.s)[i], r0=resolve(e0);
+  if(level<=3){ if(r0.unit==='kg'||r0.unit==='m'){ const st=stepFor(r0); if(P.idx===i&&P.cur) P.cur.w=Math.max(st,Math.round(P.cur.w*.8/st)*st); }
+    sheet(`<span class="eyebrow">Mild: ${level} out of 10</span><h2>Keep going, a little lighter</h2><p>Stay with <b>${esc(r0.name)}</b>${r0.unit==='kg'||r0.unit==='m'?' with about 20% less weight':''}, and move slowly through the part that pinches. Stop if it gets worse.</p>
+     ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}<button class="btn primary" data-act="hurtback" data-i="${i}">Back to training</button>`); return; }
+  P.sore[j]=true;
   exFor(P.s).forEach(e=>{ if(e.alts.some(a=>a.for===j)) delete state.swaps[e.id]; }); save();
   const e=exFor(P.s)[i], r=resolve(e), n=exFor(P.s).filter(x=>resolve(x).altFor===j).length;
   const main=r.alt&&r.altFor===j?`<b>${esc(e.name)}</b> is now <b>${esc(r.name)}</b> for the rest of today.`:`There’s no ${AREA[j].toLowerCase()}-friendly version of <b>${esc(r.name)}</b>. Use a lighter weight or skip it today.`;
-  sheet(`<span class="eyebrow">${AREA[j]}-friendly today</span><h2>Swapped</h2><p>${main}${n>1?` ${n} exercises in today’s session now use ${AREA[j].toLowerCase()}-friendly versions.`:''}</p>
+  sheet(`<span class="eyebrow">${AREA[j]}-friendly today</span><h2>${level>=7?'Skip it today':'Swapped'}</h2><p>${level>=7?`The rest of today’s session uses ${AREA[j].toLowerCase()}-friendly versions where there are some.`:main}${level<7&&n>1?` ${n} exercises in today’s session now use ${AREA[j].toLowerCase()}-friendly versions.`:''}</p>
    ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
-   <button class="btn primary" data-act="hurtback" data-i="${i}">Back to training</button>`); }
+   ${level>=7?`<p class="hint"><b>${level} out of 10 is a lot.</b> Skip <b>${esc(r.name)}</b> today. If pain this strong lasts more than a day or two, see a doctor or physiotherapist.</p>`:''}
+   <button class="btn primary" data-act="${level>=7?'hurtskip':'hurtback'}" data-i="${i}">${level>=7?'Skip it and go on':'Back to training'}</button>`); }
 
 /* 4. Monthly summary */
 let MONTH=null;
@@ -616,6 +628,7 @@ function monthTemplate(m){ if(!m.n) return 'No trainings logged in the last 30 d
 function monthFacts(m){ const f=[`Trainings in the last 30 days: ${m.n} (about ${m.perWeek.toFixed(1)} per week). Planned days per week: ${m.planned}.`];
   if(m.light) f.push(`Light days among them: ${m.light}.`);
   m.lifts.forEach(l=>f.push(`${l[0]}: from ${l[1]} ${l[3]} to ${l[2]} ${l[3]}.`));
+  (patterns()||[]).forEach(x=>f.push('Pattern from her check-ins: '+x));
   if(m.aero!=null) f.push(`Cardio minutes so far this week: ${Math.round(m.aero)} of a 150-minute goal.`);
   return f.join('\n'); }
 async function monthGo(){ const m=monthData(); if(!m.n||!aiOn()){ MONTH={text:monthTemplate(m),ai:false}; render(); return; }
@@ -673,6 +686,34 @@ function planUse(){ const p=PLAN; if(!p) return;
   p.joints.forEach(j=>state.joints[j]=true); if(p.spineSafe) state.joints.bone=true;
   if(p.stage) state.stage=p.stage;
   Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); PLAN=null; save(); closeSheet(); render(); }
+/* 3. Readiness from Apple Health: sleep and resting pulse against her own usual */
+const hm=m=>`${Math.floor(m/60)} h ${Math.round(m%60)} min`;
+function readiness(){ if(!(NATIVE&&state.health.connected)) return null;
+  const sl=HEALTH.sleep, r=HEALTH.rhr?HEALTH.rhr.value:null, w=HEALTH.rhrw.map(p=>p.value);
+  const base=w.length>=3?w.slice(0,-1).reduce((a,b)=>a+b,0)/(w.length-1):null, up=(r!=null&&base!=null)?r-base:null;
+  const bits=[]; if(sl!=null&&sl<360) bits.push(`${hm(sl)} of sleep`); if(up!=null&&up>=5) bits.push(`a resting pulse ${Math.round(up)} beats above your usual`);
+  const low=(sl!=null&&sl<300)||(up!=null&&up>=7)||bits.length===2;
+  return bits.length?{low,bits}:null; }
+/* 6. Patterns over weeks, from her own check-ins */
+function logCheckin(ck){ const k=Object.keys(ck||{}).filter(x=>ck[x]);
+  state.ckLog=(state.ckLog||[]).filter(e=>e.d!==T0); state.ckLog.push({d:T0,k,sl:HEALTH.sleep!=null?Math.round(HEALTH.sleep):null}); state.ckLog=state.ckLog.slice(-120); save(); }
+function patterns(){ const L=state.ckLog||[]; if(L.length<6) return null; const out=[], has=(e,k)=>e.k.includes(k);
+  const last=L.filter(e=>e.d>=T0-28*DAY), prev=L.filter(e=>e.d<T0-28*DAY&&e.d>=T0-56*DAY), hot=a=>a.filter(e=>has(e,'hot')).length;
+  if(hot(last)+hot(prev)>=2) out.push(prev.length>=3?`Hot-flush days: ${hot(last)} in the last 4 weeks, against ${hot(prev)} in the 4 weeks before.`:`Hot-flush days: ${hot(last)} of your last ${last.length} check-ins.`);
+  const low=L.filter(e=>has(e,'tired')||has(e,'period')), good=L.filter(e=>!e.k.length||has(e,'strong'));
+  const avgSl=a=>{const v=a.map(e=>e.sl).filter(x=>x!=null); return v.length>=2?v.reduce((p,q)=>p+q,0)/v.length:null};
+  const sLow=avgSl(low), sGood=avgSl(good); if(sLow!=null&&sGood!=null&&sGood-sLow>=30) out.push(`Before low-energy days you slept about ${hm(sLow)}, against ${hm(sGood)} before good days.`);
+  const wd=[0,0,0,0,0,0,0], wn=[0,0,0,0,0,0,0]; L.forEach(e=>wn[(new Date(e.d).getDay()+6)%7]++); low.forEach(e=>wd[(new Date(e.d).getDay()+6)%7]++);
+  const bad=wd.map((v,i)=>[v,i]).filter(([v,i])=>v>=2&&v/wn[i]>=.6).sort((a,b)=>b[0]-a[0])[0];
+  if(bad) out.push(`${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][bad[1]]} is often a low-energy day for you (${bad[0]} of ${wn[bad[1]]}). You could move that training.`);
+  const strong=L.filter(e=>has(e,'strong')).length; if(strong) out.push(`Strong days: ${strong} of ${L.length} check-ins.`);
+  const calm=L.filter(e=>has(e,'calm')).length; if(calm>=2) out.push(`Stressed or low: ${calm} of ${L.length} check-ins. A calmer session still counts.`);
+  if(!out.length) out.push(`${L.length} check-ins so far, and no clear pattern yet. Keep checking in.`);
+  return out.slice(0,4); }
+function patternCard(){ const P=patterns(), n=(state.ckLog||[]).length;
+  return `<div class="card stack"><div class="row between"><h3>How you’ve felt</h3><span class="pill plain">${n} check-in${n===1?'':'s'}</span></div>
+   ${P?`<ul class="paylist">${P.map(x=>`<li>${x}</li>`).join('')}</ul><p class="muted small">From your own check-ins before each training. Stored only on your phone.</p>`
+     :`<p class="muted">After 6 check-ins, patterns appear here: hot-flush days, low-energy days and how they link to your sleep.</p>`}</div>`; }
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
@@ -698,8 +739,9 @@ function resolve(ex){
 const curLen=()=>(state.player&&state.player.len)||state.length;
 const exFor = s=>PROGRAM[s].ex.filter(e=>(!e.min||curLen()>=e.min)&&!(e.impact&&(!state.impact||(state.player&&state.player.noImpact)))&&!(e.unit==='min'&&state.player&&state.player.cool));
 let LIGHT=false;
-const setsFor = ex=>{const L=curLen(), n= L===20 ? Math.min(ex.sets,2) : (L>=45&&ex.unit==='kg'&&!ex.min) ? ex.sets+1 : ex.sets; return LIGHT?Math.min(n,2):n};
-const restFor = ex=> Math.round(ex.rest*({20:.8,30:1,45:1.25,60:1.4}[curLen()]||1)*(state.player&&state.player.cool?1.25:1)/5)*5;
+const STRONG=()=>!!(state.player&&state.player.strong&&!state.player.light);
+const setsFor = ex=>{const L=curLen(), n= L===20 ? Math.min(ex.sets,2) : (L>=45&&ex.unit==='kg'&&!ex.min) ? ex.sets+1 : ex.sets; if(LIGHT) return Math.min(n,2); return STRONG()&&ex.unit==='kg'&&!ex.min&&!ex.impact&&L!==20?Math.min(n+1,4):n};
+const restFor = ex=> Math.round(ex.rest*({20:.8,30:1,45:1.25,60:1.4}[curLen()]||1)*(state.player&&state.player.cool?1.25:state.player&&state.player.calm?1.2:1)/5)*5;
 const LENGTHS = {20:'Two sets per exercise and shorter rests. Enough to keep and build muscle.',
   30:'The standard program. Three sets on the main lifts.',
   45:'An extra set on the main lifts, longer rests for heavier work, and two extra exercises for arms, shoulders and core.',
@@ -728,6 +770,7 @@ function suggest(ex){
   if((ex.unit==='kg'||ex.unit==='m')&&P&&(P.back||P.deload)){const f=P.back?.85:.8, w=Math.max(step,Math.round(L.w*f/step)*step);
     return {w,r:ex.lo,text:P.back?`Welcome back. After a break, start at ${w} ${u}, about 15% lighter than last time, and build up again.`:`Lighter week: ${w} ${u}, about 20% less than usual. Joints and tendons catch up, and you come back stronger.`};}
   if((ex.unit==='kg'||ex.unit==='m')&&LIGHT) return {w:L.w,r:ex.lo,text:`Light day: stay at ${L.w} ${u} and stop 2\u20133 reps short. Save the extra weight for your next full training.`};
+  if((ex.unit==='kg'||ex.unit==='m')&&STRONG()&&!all&&L.r.every(x=>x>=ex.hi-1)) return {w:L.w+step,r:ex.lo,text:`Feeling strong: try ${L.w+step} ${u}, one step up from last time. Drop back if your form slips.`};
   if(ex.unit==='kg'||ex.unit==='m'){
     if(all) return {w:L.w+step,r:ex.lo,text:`You hit the top of the range on every set last time. Go up to ${L.w+step} ${u}.`};
     return {w:L.w,r:ex.hi,text:`Stay at ${L.w} ${u}. Last time: ${L.r.join(', ')}. Try to beat ${tot} reps in total.`};
@@ -1068,7 +1111,8 @@ function viewTodayInner(){
   }
   const list=exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button>${r.alt?`<span class="pill">${JOINT[r.altFor]}</span>`:''}</div><span class="sr num">${repLabel(r)}</span></li>`}).join('');
   const doneN=wk.done.length;
-  const banner=(isWelcomeBack()&&(today||!upcoming)?`<p class="coach rest"><b>Welcome back.</b> It\u2019s been ${rec.days} days. Your next training starts about 15% lighter, so joints and tendons can catch up.</p>`:'')
+  const RDY=today&&!rec.doneToday?readiness():null;
+  const banner=(RDY&&RDY.low?`<p class="coach rest"><b>Apple Health suggests an easier day.</b> ${RDY.bits.join(' and ').replace(/^./,c=>c.toUpperCase())}. The check-in will offer a light day.</p>`:'')+(isWelcomeBack()&&(today||!upcoming)?`<p class="coach rest"><b>Welcome back.</b> It\u2019s been ${rec.days} days. Your next training starts about 15% lighter, so joints and tendons can catch up.</p>`:'')
     +(isDeloadWeek()?`<p class="coach rest"><b>Lighter week</b> (week ${trainingWeek()}). Same exercises at about 20% less weight. Every sixth week is lighter, so you keep progressing without wearing down.</p>`:'');
   return `
   <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}${banner}</div>
@@ -1304,6 +1348,7 @@ function viewProgress(){
     <p>Two trainings a week keep your muscle. Three build it. Showing up week after week matters more than any single workout.</p>
   </div>
   ${monthCard()}
+  ${patternCard()}
   <div class="card stack"><h3>Stronger since you started</h3>
     ${lifts.length?`<ol class="exlist">${lifts.map(l=>`<li style="grid-template-columns:1fr auto"><span>${l[0]}</span><span class="num"><span class="muted">${l[1]} \u2192</span> <b>${l[2]} ${U()}</b></span></li>`).join('')}</ol>`:'<p class="muted">Log a few trainings and your strength progress appears here, from your first weights to today.</p>'}
   </div>`;
@@ -1375,13 +1420,14 @@ const TIPS=['Protein helps muscle repair. Include some with every meal: fish, eg
  'Balance work protects against falls. Try standing on one leg while you brush your teeth.'];
 let CK={};
 function checkinSheet(s){
-  CK={knee:false,shoulder:false,back:false,tired:false,hot:false,short:false,period:false};
-  const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="false"><b>${t}</b><span class="muted small">${d}</span></button>`;
+  CK={calm:false,strong:false,knee:false,shoulder:false,back:false,tired:false,hot:false,short:false,period:false};
+  const RD=readiness(); if(RD&&RD.low) CK.tired=true;
+  const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="${!!CK[k]}"><b>${t}</b><span class="muted small">${d}</span></button>`;
   const peri=state.stage==='peri'||state.stage==='unsure';
   sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How are you today?</h2><p class="muted">Tap anything that fits. VitalHer adjusts today’s training only.</p>
-   ${HEALTH.sleep!=null?`<p class="small hint">Apple Health: <b class="num">${Math.floor(HEALTH.sleep/60)} h ${Math.round(HEALTH.sleep%60)} min</b> of sleep last night.${HEALTH.sleep<360?' Under 6 hours: a light day may feel better today.':''}</p>`:''}
+   ${RD&&RD.low?`<p class="small hint"><b>Apple Health:</b> ${RD.bits.join(' and ')}. A light day is ticked for you. Untick it if you feel fine.</p>`:HEALTH.sleep!=null?`<p class="small hint">Apple Health: <b class="num">${Math.floor(HEALTH.sleep/60)} h ${Math.round(HEALTH.sleep%60)} min</b> of sleep last night.${HEALTH.sleep<360?' Under 6 hours: a light day may feel better today.':''}</p>`:''}
    <h3>Today</h3>
-   <div class="stack">${o('tired','Low energy or slept badly','Light day: two sets per exercise')}${o('hot','Hot flushes or feeling overheated','Cooler session: longer rests, no cardio finisher')}${o('short','Short on time','The 20-minute version')}${peri?o('period','Period pain or heavy bleeding','Light day without impact work'):''}</div>
+   <div class="stack">${o('strong','Feeling strong','An extra set on the main lifts, and a step up where you’re close')}${o('tired','Low energy or slept badly','Light day: two sets per exercise')}${o('hot','Hot flushes or feeling overheated','Cooler session: longer rests, no cardio finisher')}${o('calm','Stressed or low','Calmer session: no impact, longer rests, slow breathing at the end')}${o('short','Short on time','The 20-minute version')}${peri?o('period','Period pain or heavy bleeding','Light day without impact work'):''}</div>
    <h3>Sore or stiff</h3>
    <div class="ckgrid">${o('knee','Knees','Knee-friendly versions')}${o('shoulder','Shoulders','Shoulder-friendly versions')}${o('back','Lower back','Back-friendly versions')}</div>
    <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
@@ -1389,17 +1435,20 @@ function checkinSheet(s){
 }
 function coachNote(P){ if(P.aiNote) return `<p class="coach rest">${esc(P.aiNote)}${aiTag}</p>`; const n=[];
   if(P.cool) n.push('Cooler session today: longer rests and no cardio finisher. Keep water and a fan close, and wear layers you can take off.');
-  if(P.noImpact) n.push('No impact work today, and two sets per exercise. Be kind to yourself.');
+  if(P.noImpact&&!P.calm) n.push('No impact work today, and two sets per exercise. Be kind to yourself.');
+  if(P.calm) n.push('Calmer session today: no impact work, longer rests, and two minutes of slow breathing at the end. Moving at all is a win.');
   else if(P.light&&P.tiredCk) n.push('Light day: two sets per exercise at last time’s weights. Showing up is what counts.');
+  if(P.strong&&!P.light) n.push('Feeling strong: one extra set on the main lifts, and a step up where you were close to the top last time. Keep your form clean.');
   if(P.len) n.push('Short version: about 20 minutes.');
   return n.length?`<p class="coach rest">${n.join(' ')}</p>`:'';}
 function startSession(s,ck={}){
-  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&pulseOn(),lastHrAt:0,hrSrc:'',light:isLightToday()||!!ck.tired||!!ck.period,tiredCk:!!(ck.tired||ck.period),cool:!!ck.hot,len:ck.short?20:0,noImpact:!!ck.period,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
+  state.player={s,idx:-1,logs:{},cur:null,t0:Date.now(),rest:null,hr:72,hrLog:[],lastT:Date.now(),real:NATIVE&&pulseOn(),lastHrAt:0,hrSrc:'',light:isLightToday()||!!ck.tired||!!ck.period,tiredCk:!!(ck.tired||ck.period),strong:!!ck.strong&&!ck.tired&&!ck.period,cool:!!ck.hot,len:ck.short?20:0,noImpact:!!ck.period||!!ck.calm,calm:!!ck.calm,periodCk:!!ck.period,sore:{knee:!!ck.knee,shoulder:!!ck.shoulder,back:!!ck.back},back:isWelcomeBack(),deload:isDeloadWeek()};
   if(state.player.real){ state.player.hr=null;
     if(state.health.connected) nat('JarlHealth','startHeartRate',{since:Date.now()-60000}).catch(()=>{});
     if(state.hrdev) nat('JarlHR','connect',{id:state.hrdev.id}).catch(()=>{}); }
   $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
+  logCheckin(ck);
   askNote();
 }
 function openEx(i){LIGHT=!!(state.player&&state.player.light); try{openExInner(i)} finally{LIGHT=false}}
@@ -1435,7 +1484,7 @@ function renderPlayerInner(){
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
   $('#player').innerHTML=`
-   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}${P.cool?' <span class="pill">Cooler</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':pulseOn()?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
+   <div class="phead"><div class="in"><div><b style="font-family:var(--display);font-stretch:112%">${TN(P.s)}</b>${P.back?' <span class="pill rest">Welcome back</span>':P.deload?' <span class="pill rest">Lighter week</span>':P.light?' <span class="pill rest">Light day</span>':''}${P.cool?' <span class="pill">Cooler</span>':''}${P.strong&&!P.light?' <span class="pill">Strong day</span>':''}${P.calm?' <span class="pill rest">Calm</span>':''}<div class="muted small num" id="elapsed">0:00</div></div>${state.hrMed?'<span></span>':pulseOn()?`<span class="hr num" id="hrchip" aria-live="off"></span>`:`<button class="btn link" style="white-space:nowrap" data-act="connect">Connect pulse</button>`}<button class="btn ghost" style="width:auto;min-height:44px" data-act="askclose">Stop</button></div></div>
    <div class="pwrap">${P.real&&!state.hrMed?`<p class="hint" id="hrwait" hidden>${state.hrdev?`<b>No pulse from ${esc(state.hrdev.name)} yet.</b> Check that it\u2019s on and close by. On a Garmin, turn on <b>Broadcast Heart Rate</b>.`:`<b>No live pulse.</b> An Apple Watch sends live pulse during a <b>Traditional Strength Training</b> workout. A Garmin sends pulse to Apple Health only after the workout. For live Garmin pulse, turn on <b>Broadcast Heart Rate</b> on the watch and connect it under <b>You</b>, then <b>Heart rate</b>.`} Until then, rest is guided by time and breathing.</p>`:''}${coachNote(P)}${warm}${items}
    <button class="btn ${allDone?'primary':'ghost'}" data-act="finish" style="margin-top:8px">${allDone?'Finish session':'Finish early'}</button></div>`;
   mountAnims($('#player')); tick();
@@ -1492,10 +1541,11 @@ async function completeSession(effort){
     hard:'Next time the weights drop by about 10%. If a joint hurt, use Swap for that exercise. See a doctor if pain lasts more than a few days.'}[effort];
   const hl=P.hrLog, avg=hl.length?Math.round(hl.reduce((a,b)=>a+b,0)/hl.length):0, peak=hl.length?Math.round(Math.max(...hl)):0;
   const hrLine=!state.hrMed&&pulseOn()&&hl.length?`<p class="row small"><span class="hr" style="--hrc:var(--alert)">${HEART}<span class="num">${avg}</span><small>avg</small></span><span>Peak <b class="num">${peak}</b> bpm, ${Math.round(peak/maxHR()*100)}% of your estimated max. ${peak>maxHR()*.85?'On the high side. Longer rests next time.':'A good range for strength work.'}</span></p>`:'';
-  const s=P.s; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
+  const s=P.s, calm=!!P.calm; clearInterval(window._tick); state.player=null; $('#player').hidden=true; $('#restbar').hidden=true; document.body.style.overflow='';
   sheet(`<span class="eyebrow">${TN(s)} done</span><h2>That’s the work done for today</h2>
    <div class="trio"><div class="mini"><span>Sets</span><b class="num">${sets}</b></div><div class="mini"><span>Minutes</span><b class="num">${mins}</b></div><div class="mini"><span>This week</span><b class="num">${weekPlan().done.length}/${Math.max(weekPlan().days.length,weekPlan().done.length)}</b></div></div>
    ${hrLine}
+   ${calm?'<p class="breath"><b>Two minutes of slow breathing now.</b> Sit or lie down. Breathe in through your nose for 4, out for 6. Let your shoulders drop.</p>':''}
    <p class="coach">${msg}</p>
    <p class="hint"><b>Tip:</b> ${TIPS[(state.history.length-1+TIPS.length)%TIPS.length]}</p>
    <p class="coach rest">Tomorrow is a rest day. A 30-minute walk counts. Next training: <b>${fmtDay(nextTraining())}</b>.</p>
@@ -1572,7 +1622,9 @@ document.addEventListener('click',ev=>{
   const P=state.player, a=t.dataset.act;
   switch(a){
     case 'start': if(!termsOk()){termsOpen('start:'+t.dataset.s); break;} gateStart(t.dataset.s); break;
-    case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k])); break;}
+    case 'ck': {const k=t.dataset.k; CK[k]=!CK[k]; t.setAttribute('aria-pressed',String(CK[k]));
+      const off=k==='strong'&&CK[k]?['tired','period']:(k==='tired'||k==='period')&&CK[k]?['strong']:[];
+      off.forEach(x=>{CK[x]=false; const b=document.querySelector(`[data-act="ck"][data-k="${x}"]`); if(b) b.setAttribute('aria-pressed','false');}); break;}
     case 'ckstart': {const ck=t.dataset.allgood?{}:{...CK}; closeSheet(); startSession(t.dataset.s,ck); break;}
     case 'mobility': mobilitySheet(); break;
     case 'mob': mobilitySheet(+t.dataset.i); break;
@@ -1631,7 +1683,8 @@ document.addEventListener('click',ev=>{
     case 'learn': learnSheet(t.dataset.id); break;
     case 'hurt': hurtSheet(+t.dataset.i); break;
     case 'hurtgo': hurtGo(+t.dataset.i); break;
-    case 'hurtpick': applySore(t.dataset.j,+t.dataset.i,'',false); break;
+    case 'hurtpick': applySore(t.dataset.j,+t.dataset.i,'',false,hurtLevel()); break;
+    case 'hurtskip': {closeSheet(); const i=+t.dataset.i, nx=i+1<exFor(P.s).length?i+1:99; P.rest=null; nx===99?(P.idx=99,renderPlayer()):openEx(nx); break;}
     case 'hurtback': closeSheet(); openEx(+t.dataset.i); break;
     case 'month': monthGo(); break;
     case 'plango': planGo(); break;
@@ -1658,6 +1711,7 @@ document.addEventListener('change',ev=>{
   if(t.dataset.joint){state.joints[t.dataset.joint]=t.checked; Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); save();}
   if(t.id==='age'){const v=+t.value; if(v>=35&&v<=90){state.age=v; save();}}
 });
+document.addEventListener('input',ev=>{ if(ev.target.id==='hurt-level'){ const o=$('#hurt-lv'); if(o) o.textContent=ev.target.value; } });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('#sheet').hidden) closeSheet();});
 render();
 loadHealth();
