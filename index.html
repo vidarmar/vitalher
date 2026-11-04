@@ -450,6 +450,7 @@ async function loadHealth(){
   const [v,vw,r,rw,h]=await Promise.all([g('latest',{type:'vo2max'}),g('weekly',{type:'vo2max',weeks:12}),g('latest',{type:'restingHeartRate'}),g('weekly',{type:'restingHeartRate',weeks:12}),g('latest',{type:'hrv'})]);
   HEALTH.vo2=v&&v.found?v:null; HEALTH.vo2w=(vw&&vw.points)||[]; HEALTH.rhr=r&&r.found?r:null; HEALTH.rhrw=(rw&&rw.points)||[]; HEALTH.hrv=h&&h.found?h:null; HEALTH.loaded=true;
   try{ const a=await withTimeout(nat('JarlHealth','activeMinutes',{since:MON}),6000); if(a&&a.minutes!=null) HEALTH.aero=a.minutes; }catch(e){}
+  try{ const z=await withTimeout(nat('JarlHealth','sleepLastNight',{}),6000); HEALTH.sleep=z&&z.found?z.minutes:null; }catch(e){}
   if(!state.player) render();
 }
 // Pulse from Apple Health (Apple Watch) or Bluetooth (Garmin broadcast, chest straps). Bluetooth wins when both send.
@@ -547,7 +548,7 @@ function save(){try{const J=JSON.stringify({stage:state.stage,impact:state.impac
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
 const short = t=>new Date(t).toLocaleDateString('en-GB',{weekday:'short'});
-const NUM={A:1,B:2,C:3}, TN=s=>`Training ${NUM[s]}`;
+const NUM={A:1,B:2,C:3}, TN=s=>`Training day ${NUM[s]}`;
 const DAYNAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const nextLetter = s=>ORDER[(ORDER.indexOf(s)+1)%3];
 const lastSession = ()=>state.history.reduce((a,b)=>b.d>a.d?b:a,state.history[0]);
@@ -872,7 +873,7 @@ function healthHelp(){
 function connectSheet(){
   sheet(`<span class="eyebrow">Apple Health</span><h2>Let VitalHer read your heart data</h2>
    <p>VitalHer reads these from Apple Health. Your Apple Watch, Garmin or chest strap already writes them there.</p>
-   <ul class="perm">${[['Heart rate','During workouts'],['Resting heart rate','Daily'],['Heart rate variability','Recovery'],['VO\u2082 max','Fitness trend'],['Walking steadiness','Balance']].map(x=>`<li><span>${x[0]}</span><span class="muted small">${x[1]}</span></li>`).join('')}</ul>
+   <ul class="perm">${[['Heart rate','During workouts'],['Resting heart rate','Daily'],['Heart rate variability','Recovery'],['VO\u2082 max','Fitness trend'],['Walking steadiness','Balance'],['Exercise minutes and workouts','Weekly cardio goal'],['Sleep','Daily check-in']].map(x=>`<li><span>${x[0]}</span><span class="muted small">${x[1]}</span></li>`).join('')}</ul>
    <p class="muted small">Read only. Your health data stays on your iPhone and is never uploaded.${NATIVE?' Apple will ask you which data to share. Tap <b>Turn On All</b>, then <b>Allow</b>.':' In this web preview the pulse is simulated. The iPhone app reads real data.'}</p>
    <button class="btn primary" data-act="allowhealth">Allow</button>
    ${NATIVE?'<p class="muted small">Garmin or chest strap? For live pulse, <button class="btn link small" style="min-height:0;padding:0;font-size:inherit" data-act="blefind">connect it over Bluetooth</button>.</p>':''}
@@ -892,7 +893,7 @@ function currentS(){const w=weekPlan(),t=w.plan.find(p=>p.d===T0);return t?t.s:r
 function nextTraining(){const p=weekPlan().plan.find(x=>x.d>T0||(x.d===T0&&!recovery().doneToday)); return p?p.d:MON+7*DAY+Math.min(...state.days)*DAY}
 function dayAdvice(){
   const n=state.days.length, b2b=consecutive(state.days);
-  const lead={2:'<b>2 days a week.</b> Enough to keep your muscle.',3:'<b>3 days a week.</b> Recommended: builds muscle with a rest day between each training.'}[n]||`<b>${n} days a week.</b> Trainings 1, 2 and 3 repeat in order.`;
+  const lead={2:'<b>2 days a week.</b> Enough to keep your muscle.',3:'<b>3 days a week.</b> Recommended: builds muscle with a rest day between each training.'}[n]||`<b>${n} days a week.</b> Training days 1, 2 and 3 repeat in order.`;
   const tail=b2b?' When trainings fall on back-to-back days, every second one becomes a <b>light day</b> automatically: two sets per exercise at the same weights.':(n<=3?' A rest day between each is ideal.':'');
   return `<p class="muted small">${lead}${tail} Pick 2 to 6 days. You can still move a single training on the Today screen.</p>`;
 }
@@ -1243,6 +1244,7 @@ function checkinSheet(s){
   const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="false"><b>${t}</b><span class="muted small">${d}</span></button>`;
   const peri=state.stage==='peri'||state.stage==='unsure';
   sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How are you today?</h2><p class="muted">Tap anything that fits. VitalHer adjusts today’s training only.</p>
+   ${HEALTH.sleep!=null?`<p class="small hint">Apple Health: <b class="num">${Math.floor(HEALTH.sleep/60)} h ${Math.round(HEALTH.sleep%60)} min</b> of sleep last night.${HEALTH.sleep<360?' Under 6 hours: a light day may feel better today.':''}</p>`:''}
    <h3>Today</h3>
    <div class="stack">${o('tired','Low energy or slept badly','Light day: two sets per exercise')}${o('hot','Hot flushes or feeling overheated','Cooler session: longer rests, no cardio finisher')}${o('short','Short on time','The 20-minute version')}${peri?o('period','Period pain or heavy bleeding','Light day without impact work'):''}</div>
    <h3>Sore or stiff</h3>
