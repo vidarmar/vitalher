@@ -260,6 +260,8 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 .save{font-size:.8rem;font-weight:700;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:3px 10px;white-space:nowrap}
 .paylinks{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center}.paylinks a{color:var(--accent);text-underline-offset:3px}.paylinks .btn.link{min-height:36px;padding:0;font-size:inherit}
 #sheet .btn[disabled]{opacity:.6}
+#sheet.center{align-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+#sheet.center .panel{border-radius:18px;max-height:calc(100% - 32px);padding-bottom:22px;box-shadow:0 16px 48px rgba(0,0,0,.28)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -1431,7 +1433,8 @@ function checkinSheet(s){
    <h3>Sore or stiff</h3>
    <div class="ckgrid">${o('knee','Knees','Knee-friendly versions')}${o('shoulder','Shoulders','Shoulder-friendly versions')}${o('back','Lower back','Back-friendly versions')}</div>
    <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
-   <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
+   <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>
+   <button class="btn link" style="align-self:center;color:var(--muted)" data-act="closesheet">Not now</button>`,true);
 }
 function coachNote(P){ if(P.aiNote) return `<p class="coach rest">${esc(P.aiNote)}${aiTag}</p>`; const n=[];
   if(P.cool) n.push('Cooler session today: longer rests and no cardio finisher. Keep water and a fan close, and wear layers you can take off.');
@@ -1554,7 +1557,7 @@ async function completeSession(effort){
 }
 
 /* ---------- Sheets ---------- */
-function sheet(html){const s=$('#sheet'); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
+function sheet(html,center){const s=$('#sheet'); s.classList.toggle('center',!!center); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
 function closeSheet(){if(typeof mobStop==='function')mobStop(); if($('#sheet .blelist')&&NATIVE) nat('JarlHR','stopScan',{}).catch(()=>{});$('#sheet').hidden=true; $('#sheet').innerHTML='';}
 function swapSheet(i){
   const P=state.player, e=exFor(P?P.s:currentS())[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
@@ -1615,7 +1618,7 @@ function render(){
 }
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('[data-tab],[data-act],[data-seg]');
-  if(ev.target.id==='sheet'){closeSheet();return}
+  if(ev.target.id==='sheet'){ if(!ev.target.classList.contains('center')) closeSheet(); return}
   if(!t) return;
   if(t.dataset.tab){state.onboard=false; state.tab=t.dataset.tab; render(); window.scrollTo(0,0); return}
   if(t.dataset.seg){state[t.dataset.seg]=isNaN(+t.dataset.v)?t.dataset.v:+t.dataset.v; save(); render(); return}
