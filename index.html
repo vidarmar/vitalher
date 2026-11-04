@@ -95,6 +95,8 @@ details.map summary::-webkit-details-marker{display:none}
 #player.dark{--bg:#1B1715; --surface:#241F1C; --sunk:#2E2824; --ink:#F1E9E2; --muted:#B5A79B; --line:#3B342F; --accent:#C4C79A; --accent-ink:#1B1715; --accent-soft:#33352A; --brass:#F0A08A; --rest-soft:#1E2E25; --far:#6A5F57; --eq:#4A413B; --eqsoft:#2A2421; --z1:#9AA6AF; --z2:#5AA6E6; --z3:#55C285; --z4:#F0A44A; --z5:#F0695C; color-scheme:dark; background:var(--bg); color:var(--ink)}
 /* 1.7 */
 .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ta{width:100%;min-height:88px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
+.ailabel{display:block;margin-top:6px;font-size:.75rem;color:var(--muted)}
 .breath{background:var(--rest-soft);color:var(--ink);border-radius:10px;padding:8px 12px}
 /* user agreement */
 #terms{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:30;padding-top:env(safe-area-inset-top,0px)}
@@ -425,7 +427,7 @@ const learnList=()=>`<div class="stack">${LEARN.map(a=>`<button class="opt" data
 const todaysRead=()=>LEARN[Math.floor(T0/DAY)%LEARN.length];
 /* ---------- State (example user, marked as sample) ---------- */
 const state = {
-  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true,
+  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true,
   joints:{knee:false,shoulder:false,back:false,bone:false},
   swaps:{},
   history:[],
@@ -541,9 +543,136 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
 
+const COACH={ok:false,reason:''};
+if(NATIVE){ withTimeout(nat('VitalCoach','availability',{}),4000).then(r=>{COACH.ok=!!(r&&r.available); COACH.reason=(r&&r.reason)||''; if(!state.player&&$('#sheet').hidden) render();}).catch(()=>{}); }
+const aiOn=()=>COACH.ok&&state.ai!==false;
+const aiTag='<span class="ailabel">Written on your iPhone by Apple Intelligence</span>';
+// Warning signs: never answered with an exercise swap
+const RED=/chest (pain|tight)|faint|passed out|blacked out|dizz|light.?headed|can.?t breathe|short of breath|breathless|numb|tingl|bleed|palpitat|heart (is )?(racing|pounding)/i;
+function redSheet(){ sheet(`<span class="eyebrow">Please stop for now</span><h2>Stop training and rest</h2><p>What you describe needs a doctor, not an exercise swap. Stop, sit down and rest.</p><p><b>If you have chest pain, trouble breathing or feel faint, call emergency services now</b>: 113 in Norway, 112 in the EU, 999 in the UK, 911 in the US.</p><button class="btn ghost" data-act="closesheet">Close</button>`); }
+// AI text is shown only if it is short and stays clear of medical topics; otherwise VitalHer's own text is used
+const BAD=/diagnos|prescri|dosage|\bdose\b|\bhrt\b|hormone|oestrogen|estrogen|\bcure|\btreat|prevent osteo|medication|!|#/i;
+function cleanAI(t,max){ if(typeof t!=='string') return null; t=t.replace(/\s+/g,' ').trim().replace(/^["“']+|["”']+$/g,''); if(t.length<8||t.length>max||BAD.test(t)) return null; return t; }
+
+/* 1. Coach note before the session */
+function noteFacts(P){ const f=[`Session: ${TN(P.s)}, about ${minutes(P.s)} minutes.`];
+  if(P.noImpact) f.push('She reported period pain or heavy bleeding, so there is no impact work today and two sets per exercise.');
+  else if(P.tiredCk) f.push('She reported low energy or poor sleep, so today is a light day: two sets per exercise at last time’s weights.');
+  if(P.cool) f.push('She feels hot or has hot flushes, so rests are longer and there is no cardio finisher.');
+  if(P.len) f.push('She is short on time, so this is the 20-minute version.');
+  const sore=['knee','shoulder','back'].filter(j=>P.sore[j]); if(sore.length) f.push(`Gentler versions are swapped in for her ${sore.join(' and ').replace('back','lower back')}.`);
+  if(P.back) f.push('She is coming back after a break of ten days or more, so weights start about 15% lighter.');
+  else if(P.deload) f.push('This is a planned lighter week with about 20% less weight.');
+  if(HEALTH.sleep!=null) f.push(`Apple Health shows ${Math.floor(HEALTH.sleep/60)} hours ${Math.round(HEALTH.sleep%60)} minutes of sleep last night.`);
+  if(f.length===1) f.push('Nothing was adjusted today. She says she feels fine.');
+  return f.join('\n'); }
+function askNote(){ const P=state.player; if(!P||!aiOn()) return;
+  withTimeout(nat('VitalCoach','note',{facts:noteFacts(P)}),15000).then(r=>{ const t=cleanAI(r&&r.text,320); if(t&&state.player===P){ P.aiNote=t; renderPlayer(); } }).catch(()=>{}); }
+
+/* 2. Swap helper during the session */
+const AREA={knee:'Knee',shoulder:'Shoulder',back:'Lower back'};
+function readJoint(t){ const s=t.toLowerCase(); return /knee/.test(s)?'knee':/shoulder|elbow|neck|\barm/.test(s)?'shoulder':/back|spine|\bhip|sciatic/.test(s)?'back':''; }
+function hurtSheet(i,msg){ const P=state.player, r=resolve(exFor(P.s)[i]);
+  sheet(`<span class="eyebrow">${esc(r.name)}</span><h2>What’s bothering you?</h2>
+   ${msg?`<p class="small" style="color:var(--warn)"><b>${msg}</b></p>`:''}
+   <p class="muted">Tell VitalHer in your own words, or tap an area. It swaps in gentler versions for the rest of today.</p>
+   <label for="hurt-text" class="small"><b>In your own words</b></label>
+   <textarea id="hurt-text" class="ta" rows="3" placeholder="For example: my left knee aches at the bottom of the squat"></textarea>
+   <button class="btn primary" data-act="hurtgo" data-i="${i}">Find a gentler version</button>
+   <div class="ckgrid">${Object.keys(AREA).map(j=>`<button class="opt" data-act="hurtpick" data-i="${i}" data-j="${j}"><b>${AREA[j]}</b></button>`).join('')}</div>
+   <p class="muted small">Sharp pain is a signal to stop that exercise. If pain lasts more than a few days, see a doctor or physiotherapist.</p>
+   <button class="btn ghost" data-act="closesheet">Cancel</button>`); }
+async function hurtGo(i){ const P=state.player, box=$('#hurt-text'), text=box?box.value.trim():''; if(!P||!text) return;
+  if(RED.test(text)) return redSheet();
+  const names=exFor(P.s).map(e=>resolve(e).name); let j=readJoint(text), idx=i, reply='', ai=false;
+  if(aiOn()){ sheet('<h2>Finding a gentler version…</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>');
+    try{ const r=await withTimeout(nat('VitalCoach','swap',{text,exercises:names}),15000);
+      if(r&&AREA[r.joint]){ j=r.joint; ai=true; } const k=r?names.indexOf(r.exercise):-1; if(k>-1) idx=k; const c=cleanAI(r&&r.reply,160); if(c){ reply=c; ai=true; } }catch(e){} }
+  if(!j) return hurtSheet(i,'VitalHer couldn’t tell which area. Tap one below.');
+  applySore(j,idx,reply,ai); }
+function applySore(j,i,reply,ai){ const P=state.player; if(!P) return; P.sore[j]=true;
+  exFor(P.s).forEach(e=>{ if(e.alts.some(a=>a.for===j)) delete state.swaps[e.id]; }); save();
+  const e=exFor(P.s)[i], r=resolve(e), n=exFor(P.s).filter(x=>resolve(x).altFor===j).length;
+  const main=r.alt&&r.altFor===j?`<b>${esc(e.name)}</b> is now <b>${esc(r.name)}</b> for the rest of today.`:`There’s no ${AREA[j].toLowerCase()}-friendly version of <b>${esc(r.name)}</b>. Use a lighter weight or skip it today.`;
+  sheet(`<span class="eyebrow">${AREA[j]}-friendly today</span><h2>Swapped</h2><p>${main}${n>1?` ${n} exercises in today’s session now use ${AREA[j].toLowerCase()}-friendly versions.`:''}</p>
+   ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
+   <button class="btn primary" data-act="hurtback" data-i="${i}">Back to training</button>`); }
+
+/* 4. Monthly summary */
+let MONTH=null;
+function monthData(){ const since=T0-30*DAY, h=state.history.filter(x=>x.d>=since);
+  const lifts=Object.keys(state.first).filter(n=>state.last[n]&&state.first[n].w&&state.last[n].w>state.first[n].w&&(state.last[n].u||'kg')===(state.first[n].u||'kg'))
+    .map(n=>[n,state.first[n].w,state.last[n].w,state.last[n].u||'kg']).sort((a,b)=>b[2]/b[1]-a[2]/a[1]).slice(0,3);
+  return {n:h.length, perWeek:h.length/30*7, light:h.filter(x=>x.light).length, lifts, aero:HEALTH.aero, planned:state.days.length}; }
+function monthTemplate(m){ if(!m.n) return 'No trainings logged in the last 30 days yet. Your first one starts the story.';
+  let t=`You trained ${m.n} time${m.n>1?'s':''} in the last 30 days, about ${m.perWeek.toFixed(1)} a week${m.light?`, with ${m.light} light day${m.light>1?'s':''} when your body asked for it`:''}.`;
+  if(m.lifts.length) t+=' You got stronger: '+m.lifts.map(l=>`${l[0]} from ${l[1]} to ${l[2]} ${l[3]}`).join(', ')+'.';
+  if(m.aero!=null) t+=` This week you have ${Math.round(m.aero)} of 150 cardio minutes.`;
+  t+=m.perWeek<2?' Focus for next month: two sessions every week, even short ones.':' Focus for next month: keep the rhythm and let the weights keep climbing.';
+  return t; }
+function monthFacts(m){ const f=[`Trainings in the last 30 days: ${m.n} (about ${m.perWeek.toFixed(1)} per week). Planned days per week: ${m.planned}.`];
+  if(m.light) f.push(`Light days among them: ${m.light}.`);
+  m.lifts.forEach(l=>f.push(`${l[0]}: from ${l[1]} ${l[3]} to ${l[2]} ${l[3]}.`));
+  if(m.aero!=null) f.push(`Cardio minutes so far this week: ${Math.round(m.aero)} of a 150-minute goal.`);
+  return f.join('\n'); }
+async function monthGo(){ const m=monthData(); if(!m.n||!aiOn()){ MONTH={text:monthTemplate(m),ai:false}; render(); return; }
+  MONTH={text:'Writing your summary…',ai:false,busy:true}; render();
+  try{ const r=await withTimeout(nat('VitalCoach','summary',{facts:monthFacts(m)}),20000); const t=cleanAI(r&&r.text,700); MONTH=t?{text:t,ai:true}:{text:monthTemplate(m),ai:false}; }
+  catch(e){ MONTH={text:monthTemplate(m),ai:false}; }
+  if(state.tab==='progress'&&!state.player) render(); }
+function monthCard(){ const m=monthData(), M=MONTH||{text:monthTemplate(m),ai:false};
+  return `<div class="card stack"><div class="row between"><h3>Your month in words</h3><span class="pill plain">Last 30 days</span></div>
+   <p>${esc(M.text)}</p>${M.ai?aiTag:''}
+   ${m.n?`<button class="btn ghost" data-act="month" ${M.busy?'disabled':''}>${aiOn()?(M.ai?'Write it again':'Write my summary'):'Update'}</button>`:''}</div>`; }
+
+/* 5. Plan by conversation */
+let PLAN=null;
+const DAYRX=[/\bmon(day)?s?\b/,/\btue(s|sday)?s?\b/,/\bwed(nesday)?s?\b/,/\bthu(r|rs|rsday)?s?\b/,/\bfri(day)?s?\b/,/\bsat(urday)?s?\b/,/\bsun(day)?s?\b/];
+function parsePlan(t){ const s=t.toLowerCase(), o={days:[],minutes:0,equipment:'unknown',joints:[],stage:'',spineSafe:false};
+  DAYRX.forEach((rx,i)=>{ if(rx.test(s)) o.days.push(i); });
+  if(/\bweekends?\b/.test(s)) [5,6].forEach(d=>{ if(!o.days.includes(d)) o.days.push(d); });
+  if(!o.days.length){ const m=s.match(/\b([2-6]|two|three|four|five|six)\s*(days|times|sessions)/); if(m){ const n={two:2,three:3,four:4,five:5,six:6}[m[1]]||+m[1]; o.days={2:[1,4],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4],6:[0,1,2,3,4,5]}[n]||[]; } }
+  const mm=s.match(/(\d{2})\s*(min|mins|minutes)\b/); if(mm) o.minutes=+mm[1]; else if(/half an hour/.test(s)) o.minutes=30; else if(/\ban hour\b|\bone hour\b/.test(s)) o.minutes=60;
+  if(/\bhome\b|living room|garage|dumbbells?|\bbands?\b|kettlebell/.test(s)) o.equipment='home'; if(/\bgym\b/.test(s)) o.equipment='gym';
+  if(/knee/.test(s)) o.joints.push('knee'); if(/shoulder/.test(s)) o.joints.push('shoulder'); if(/lower back|back pain|bad back|my back|sciatica/.test(s)) o.joints.push('back');
+  if(/osteopor|osteopen|spin(e|al) fracture|vertebra|fractured? (my )?spine|crush fracture/.test(s)) o.spineSafe=true;
+  if(/peri.?meno/.test(s)) o.stage='peri'; else if(/post.?meno/.test(s)) o.stage='post'; else if(/menopaus/.test(s)) o.stage='meno';
+  return o; }
+function mergePlan(a,k){ const days=Array.isArray(a.days)?[...new Set(a.days.map(Number).filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].sort():[];
+  const near=v=>[20,30,45,60].reduce((b,x)=>Math.abs(x-v)<Math.abs(b-v)?x:b,30);
+  return { days:days.length>=2&&days.length<=6?days:k.days, minutes:a.minutes>0?near(+a.minutes):k.minutes,
+    equipment:['gym','home'].includes(a.equipment)?a.equipment:k.equipment,
+    joints:[...new Set([...(Array.isArray(a.joints)?a.joints:[]).filter(j=>AREA[j]),...k.joints])],
+    stage:['peri','meno','post','unsure'].includes(a.stage)?a.stage:k.stage, spineSafe:!!a.spineSafe||k.spineSafe }; }
+async function planGo(){ const box=$('#plan-text'), text=box?box.value.trim():''; if(!text) return;
+  const k=parsePlan(text); let p=k, ai=false;
+  if(aiOn()){ sheet('<h2>Reading your week…</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>');
+    try{ const r=await withTimeout(nat('VitalCoach','plan',{text}),15000); if(r){ p=mergePlan(r,k); ai=true; } }catch(e){} }
+  PLAN=p; planSheet(ai); }
+function planSheet(ai){ const p=PLAN, rows=[];
+  if(p.days.length>=2&&p.days.length<=6) rows.push(['Training days',p.days.map(d=>DAYNAMES[d]).join(', ')]);
+  else if(p.days.length===1) rows.push(['Training days',`Only ${DAYNAMES[p.days[0]]} found. VitalHer needs 2 to 6 days, so your days stay as they are`]);
+  if(p.minutes) rows.push(['Session length',`${[20,30,45,60].reduce((b,x)=>Math.abs(x-p.minutes)<Math.abs(b-p.minutes)?x:b,30)} minutes`]);
+  if(p.equipment!=='unknown') rows.push(['Equipment',p.equipment==='home'?'Home':'Gym']);
+  if(p.joints.length) rows.push(['Joints to protect',p.joints.map(j=>AREA[j]).join(', ')]);
+  if(p.spineSafe) rows.push(['Spine-safe mode','On']);
+  if(p.stage) rows.push(['Your stage',{peri:'Perimenopause',meno:'Menopause',post:'Post-menopause',unsure:'Not sure'}[p.stage]]);
+  if(!rows.length){ sheet(`<h2>Nothing to fill in yet</h2><p>VitalHer couldn’t find days, a session length or equipment in that. Try naming the days and how long you have, for example: “Monday, Wednesday and Friday, 30 minutes at home.”</p><button class="btn ghost" data-act="closesheet">OK</button>`); return; }
+  sheet(`<span class="eyebrow">Your plan</span><h2>Use these settings?</h2>
+   <ul class="perm">${rows.map(r=>`<li><span>${r[0]}</span><span class="small" style="text-align:right"><b>${r[1]}</b></span></li>`).join('')}</ul>
+   ${ai?aiTag:''}<p class="muted small">Only the settings listed change. You can adjust any of them below afterwards.</p>
+   <button class="btn primary" data-act="planuse">Use these settings</button>
+   <button class="btn ghost" data-act="closesheet">Cancel</button>`); }
+function planUse(){ const p=PLAN; if(!p) return;
+  if(p.days.length>=2&&p.days.length<=6){ state.days=p.days.slice(); state.weekOverride=null; }
+  if(p.minutes) state.length=[20,30,45,60].reduce((b,x)=>Math.abs(x-p.minutes)<Math.abs(b-p.minutes)?x:b,30);
+  if(p.equipment!=='unknown') state.equip=p.equipment;
+  p.joints.forEach(j=>state.joints[j]=true); if(p.spineSafe) state.joints.bone=true;
+  if(p.stage) state.stage=p.stage;
+  Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); PLAN=null; save(); closeSheet(); render(); }
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
@@ -1174,6 +1303,7 @@ function viewProgress(){
     </svg>`:'<p class="muted">Your first training will show up here.</p>'}
     <p>Two trainings a week keep your muscle. Three build it. Showing up week after week matters more than any single workout.</p>
   </div>
+  ${monthCard()}
   <div class="card stack"><h3>Stronger since you started</h3>
     ${lifts.length?`<ol class="exlist">${lifts.map(l=>`<li style="grid-template-columns:1fr auto"><span>${l[0]}</span><span class="num"><span class="muted">${l[1]} \u2192</span> <b>${l[2]} ${U()}</b></span></li>`).join('')}</ol>`:'<p class="muted">Log a few trainings and your strength progress appears here, from your first weights to today.</p>'}
   </div>`;
@@ -1187,6 +1317,10 @@ function viewProfile(){
   <p>Tell VitalHer about your stage, your bones and your joints. It swaps in gentler exercises automatically. You can still change any exercise during a session.</p></div>
   <div class="card"><div class="field"><label for="age"><b>Age</b><br><span class="muted small">Starts at 35. Set your own age for accurate heart-rate zones and comparisons</span></label><input id="age" type="number" inputmode="numeric" min="35" max="90" value="${state.age}"></div></div>
   <div class="card stack"><h3>Weight unit</h3>${seg('units',[['kg','Kilograms (kg)'],['lb','Pounds (lb)']])}<p class="muted small">${U()==='lb'?'Dumbbells go up in 5 lb steps, machines in 10 lb steps.':'Dumbbells go up in 2 kg steps, machines in 5 kg steps.'} Weights you\u2019ve already logged are converted.</p></div>
+  <div class="card stack"><h3>Describe your week</h3><p class="muted small">Write how you’d like to train, and VitalHer fills in the settings below for you to check.</p>
+    <label for="plan-text" class="small"><b>In your own words</b></label>
+    <textarea id="plan-text" class="ta" rows="3" placeholder="For example: Tuesday, Thursday and Saturday, about 30 minutes at home with dumbbells. My knees are a bit sore."></textarea>
+    <button class="btn primary" data-act="plango">Fill in my plan</button></div>
   <div class="card stack"><h3>Your stage</h3>${seg('stage',[['peri','Peri'],['meno','Meno'],['post','Post'],['unsure','Not sure']])}<p class="muted small">${{peri:'Perimenopause: periods are changing or irregular.',meno:'Menopause: about a year since your last period.',post:'Post-menopause: more than a year since your last period.',unsure:'That’s fine. VitalHer works the same, and you can change this any time.'}[state.stage]} The check-in offers a period option in perimenopause.</p></div>
   <div class="card"><h3 style="margin-bottom:4px">Bones</h3>
     ${sw('bone','Spine-safe mode','For osteoporosis, osteopenia or a past fracture of the spine. No loaded forward bending, and impact at walking level.')}
@@ -1199,6 +1333,7 @@ function viewProfile(){
     ${sw('shoulder','Shoulders','Neutral grips and gentler pressing angles')}
     ${sw('back','Lower back','Supported rows and bridges instead of forward bending')}
   </div>
+  <div class="card"><label class="switch" for="aiopt"><span><b>AI coach</b><br><span class="muted small">${COACH.ok?'Coach notes, swap help, your plan and a monthly summary, written on your iPhone by Apple Intelligence. Nothing leaves your phone.':NATIVE?(COACH.reason==='off'?'Turn on Apple Intelligence in the iPhone Settings app to use the AI coach. VitalHer works the same without it.':'Needs an iPhone 15 Pro or newer with Apple Intelligence. VitalHer works the same without it.'):'In the iPhone app, Apple Intelligence writes coach notes on supported iPhones. This preview uses VitalHer’s own texts.'}</span></span><input type="checkbox" id="aiopt" data-pref="ai" ${state.ai!==false?'checked':''} ${COACH.ok?'':'disabled'}></label></div>
   <div class="card"><h3 style="margin-bottom:4px">Heart rate</h3>
     <div class="src"><span><b>Apple Health</b><br><span class="status ${state.health.connected?'on':'off'}">${state.health.connected?(NATIVE?'Connected. Pulse, resting pulse, HRV, VO\u2082 max':'Simulated in this web preview'):'Not connected'}</span></span>
       <button class="btn ${state.health.connected?'ghost':'primary'}" style="width:auto;min-height:44px" data-act="${state.health.connected?'disconnect':'connect'}">${state.health.connected?'Disconnect':'Connect'}</button></div>
@@ -1252,7 +1387,7 @@ function checkinSheet(s){
    <button class="btn primary" data-act="ckstart" data-s="${s}">Start ${TN(s)}</button>
    <button class="btn link" style="align-self:center" data-act="ckstart" data-s="${s}" data-allgood="1">All good, start</button>`);
 }
-function coachNote(P){const n=[];
+function coachNote(P){ if(P.aiNote) return `<p class="coach rest">${esc(P.aiNote)}${aiTag}</p>`; const n=[];
   if(P.cool) n.push('Cooler session today: longer rests and no cardio finisher. Keep water and a fan close, and wear layers you can take off.');
   if(P.noImpact) n.push('No impact work today, and two sets per exercise. Be kind to yourself.');
   else if(P.light&&P.tiredCk) n.push('Light day: two sets per exercise at last time’s weights. Showing up is what counts.');
@@ -1265,6 +1400,7 @@ function startSession(s,ck={}){
     if(state.hrdev) nat('JarlHR','connect',{id:state.hrdev.id}).catch(()=>{}); }
   $('#player').hidden=false; $('#player').classList.toggle('dark',!!state.workDark); document.body.style.overflow='hidden'; renderPlayer();
   clearInterval(window._tick); window._tick=setInterval(tick,500);
+  askNote();
 }
 function openEx(i){LIGHT=!!(state.player&&state.player.light); try{openExInner(i)} finally{LIGHT=false}}
 function openExInner(i){const P=state.player; P.idx=i; if(i>=0){const r=resolve(exFor(P.s)[i]); const sg=suggest(r); P.cur={w:sg.w,r:r.unit==='m'?r.hi:sg.r};} renderPlayer();}
@@ -1294,7 +1430,7 @@ function renderPlayerInner(){
       <div class="sets">${chips}</div>
       ${done?`<p class="muted">All sets done.</p>${(()=>{const nx=nextOpen(P); return nx>-1?`<button class="btn primary" data-act="nextex">Next: ${resolve(ex[nx]).name}</button>`:''})()}`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
       <button class="btn primary" data-act="log">${r.unit==='min'?'Log cardio':`Log set ${logs.length+1} of ${n}`}</button>`}
-      <div class="row between"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="skip">Skip</button></div>
+      <div class="row between" style="flex-wrap:wrap;gap:4px 12px"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="hurt" data-i="${i}">Something hurts?</button><button class="btn link" data-act="skip">Skip</button></div>
     </div></div>`;
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
@@ -1493,6 +1629,13 @@ document.addEventListener('click',ev=>{
     case 'onboard-done': state.onboard=false; state.tab='today'; render(); window.scrollTo(0,0); break;
     case 'demo': demoSheet(t.dataset.name); break;
     case 'learn': learnSheet(t.dataset.id); break;
+    case 'hurt': hurtSheet(+t.dataset.i); break;
+    case 'hurtgo': hurtGo(+t.dataset.i); break;
+    case 'hurtpick': applySore(t.dataset.j,+t.dataset.i,'',false); break;
+    case 'hurtback': closeSheet(); openEx(+t.dataset.i); break;
+    case 'month': monthGo(); break;
+    case 'plango': planGo(); break;
+    case 'planuse': planUse(); break;
     case 'toggleanim': toggleAnim(t.querySelector('svg')); break;
     case 'allowhealth': { const done=()=>{state.health.connected=true; save(); closeSheet(); if(state.player){state.player.lastT=Date.now(); renderPlayer()} else render(); loadHealth();};
       if(NATIVE){ t.disabled=true; t.textContent='Asking Apple Health\u2026'; let answered=false;
