@@ -686,6 +686,12 @@ function ik(A,C,l1,l2,bend){
 }
 const lerp=(a,b,k)=>a+(b-a)*k, lerpP=(a,b,k)=>[lerp(a[0],b[0],k),lerp(a[1],b[1],k)];
 function mix(A,B,k){const o={};for(const key in A){const a=A[key],b=B[key];o[key]=Array.isArray(a)?lerpP(a,b||a,k):typeof a==='number'?lerp(a,b??a,k):a}return o}
+function fTorso(hip,sh,c){const dx=sh[0]-hip[0],dy=sh[1]-hip[1],L=Math.hypot(dx,dy)||1,fx=-dy/L,fy=dx/L;
+  const at=(t,o)=>[hip[0]+dx*t+fx*o,hip[1]+dy*t+fy*o];
+  const Q=[[-.04,5],[.42,4],[.72,8.5],[.97,5],[1.03,-4],[.72,-5],[.42,-4],[.06,-9.5],[-.1,-6]].map(([t,o])=>at(t,o));
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2], n=Q.length; let m=mid(Q[n-1],Q[0]), d=`M${m[0].toFixed(1)},${m[1].toFixed(1)}`;
+  for(let i=0;i<n;i++){const p=Q[i], q=mid(p,Q[(i+1)%n]); d+=` Q${p[0].toFixed(1)},${p[1].toFixed(1)} ${q[0].toFixed(1)},${q[1].toFixed(1)}`;}
+  return `<path d="${d} Z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`;}
 function sidePose(f,spec){
   const [sx,sy]=dirA(f.t), [nx,ny]=dirA(f.t+(f.nod||0)), hd=f.hd||[0,0], hip=f.hip, sh=[hip[0]+LEN.torso*sx,hip[1]+LEN.torso*sy], neck=[sh[0]+6*nx+hd[0]*.5,sh[1]+6*ny+hd[1]*.5], head=[neck[0]+9*nx+hd[0]*.5,neck[1]+9*ny+hd[1]*.5];
   const ctrl=f.arch?[(hip[0]+sh[0])/2+2*f.arch*sy,(hip[1]+sh[1])/2-2*f.arch*sx]:null;
@@ -697,7 +703,7 @@ function sidePose(f,spec){
   return {hip,sh,neck,head,ctrl,near:{arm:[sh,en,hn],leg:[hip,kn,an,foot(kn,an)]},far:{arm:[sh,ef,hf],leg:[hip,kf,af,foot(kf,af)]}};
 }
 function frontPose(f){
-  const [x,y]=f.hip, shR=[x+15,y-47], shL=[x-15,y-47];
+  const [x,y]=f.hip, shR=[x+13,y-47], shL=[x-13,y-47];
   const HR=[shR[0]+f.hr[0],shR[1]+f.hr[1]], hl=f.hl||[-f.hr[0],f.hr[1]], HL=[shL[0]+hl[0],shL[1]+hl[1]];
   const [eR,hR]=ik(shR,HR,LEN.ua,LEN.fa,1), [eL,hL]=ik(shL,HL,LEN.ua,LEN.fa,-1);
   return {x,y,shR,shL,hR,hL,eR,eL};
@@ -719,10 +725,10 @@ function drawFront(spec,f){
   const P=frontPose(f), p=spec.p||{}, ink='var(--ink)';
   const seg=(a,w,c)=>`<polyline points="${pts(a)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
-  s+=seg([[P.x-8,P.y],[P.x-10,P.y+39],[P.x-12,FLOOR-2],[P.x-22,FLOOR-2]],7,ink)+seg([[P.x+8,P.y],[P.x+10,P.y+39],[P.x+12,FLOOR-2],[P.x+22,FLOOR-2]],7,ink);
-  s+=`<polygon points="${pts([[P.x-10,P.y+2],[P.x+10,P.y+2],P.shR,P.shL])}" fill="${ink}" stroke="${ink}" stroke-width="6" stroke-linejoin="round"/>`;
+  s+=seg([[P.x-9,P.y],[P.x-10,P.y+20]],10,ink)+seg([[P.x+9,P.y],[P.x+10,P.y+20]],10,ink)+seg([[P.x-9,P.y],[P.x-10,P.y+39],[P.x-12,FLOOR-2],[P.x-22,FLOOR-2]],7,ink)+seg([[P.x+9,P.y],[P.x+10,P.y+39],[P.x+12,FLOOR-2],[P.x+22,FLOOR-2]],7,ink);
+  s+=`<path d="M${P.x-14},${P.y+4} Q${P.x-14},${P.y-8} ${P.x-9.5},${P.y-22} Q${P.x-12},${P.y-38} ${P.shL[0]},${P.shL[1]} L${P.shR[0]},${P.shR[1]} Q${P.x+12},${P.y-38} ${P.x+9.5},${P.y-22} Q${P.x+14},${P.y-8} ${P.x+14},${P.y+4} Z" fill="${ink}" stroke="${ink}" stroke-width="4" stroke-linejoin="round"/>`;
   s+=`<circle cx="${P.x}" cy="${P.y-65}" r="10" fill="${ink}"/><circle cx="${P.x}" cy="${P.y-77}" r="5" fill="${ink}"/>`;
-  s+=seg([P.shR,P.eR,P.hR],7,ink)+seg([P.shL,P.eL,P.hL],7,ink);
+  s+=seg([P.shR,P.eR,P.hR],6,ink)+seg([P.shL,P.eL,P.hL],6,ink);
   const db=(h)=>`<rect x="${h[0]-11}" y="${h[1]-3}" width="22" height="6" rx="2" fill="var(--brass)"/><rect x="${h[0]-13}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/><rect x="${h[0]+7}" y="${h[1]-7}" width="6" height="14" rx="2" fill="var(--brass)"/>`;
   if(p.db==='both') s+=db(P.hR)+db(P.hL); if(p.db==='r') s+=db(P.hR);
   return s;
@@ -731,13 +737,13 @@ function drawSide(spec,f){
   const P=sidePose(f,spec), p=spec.p||{}, ink='var(--ink)', far='var(--far)';
   const seg=(a,w,c)=>`<polyline points="${pts(a)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   let s=`<line x1="10" y1="${FLOOR}" x2="230" y2="${FLOOR}" stroke="var(--eq)" stroke-width="2"/>`;
-  s+=seg(P.far.leg,7,far)+seg(P.far.arm,7,far)+drawProps(spec,P);
+  s+=seg([P.far.leg[0],lerpP(P.far.leg[0],P.far.leg[1],.5)],10,far)+seg(P.far.leg,7,far)+seg(P.far.arm,6,far)+drawProps(spec,P);
   if(p.cable){const h=P.near.arm[2];s+=`<circle cx="${p.cable[0]}" cy="${p.cable[1]}" r="5" fill="var(--eq)"/><line x1="${p.cable[0]}" y1="${p.cable[1]}" x2="${h[0]}" y2="${h[1]}" stroke="var(--eq)" stroke-width="2"${p.cable[2]?' stroke-dasharray="4 4"':''}/>`}
   if(p.plate){const [k,a]=[P.near.leg[1],P.near.leg[2]],ang=Math.atan2(a[1]-k[1],a[0]-k[0])*180/Math.PI;s+=`<rect x="-3" y="-16" width="6" height="32" rx="2" fill="var(--eq)" transform="translate(${a[0]+5*Math.cos(rad(ang))},${a[1]+5*Math.sin(rad(ang))}) rotate(${ang})"/>`}
   const suit=p.suit?'var(--suit)':ink;
-  s+=(P.ctrl?`<path d="M${P.hip[0].toFixed(1)},${P.hip[1].toFixed(1)} Q${P.ctrl[0].toFixed(1)},${P.ctrl[1].toFixed(1)} ${P.sh[0].toFixed(1)},${P.sh[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round"/>`:seg([P.hip,P.sh],p.suit?16:10,suit))+seg([P.sh,P.neck],6,ink)+`<circle cx="${P.head[0]}" cy="${P.head[1]}" r="10" fill="${ink}"/>`+(()=>{const ux=P.head[0]-P.neck[0],uy=P.head[1]-P.neck[1],u=Math.hypot(ux,uy)||1,fx=-uy/u,fy=ux/u;return `<circle cx="${(P.head[0]-9*fx+3*ux/u).toFixed(1)}" cy="${(P.head[1]-9*fy+3*uy/u).toFixed(1)}" r="5.5" fill="${ink}"/>`})();
+  s+=(P.ctrl?`<path d="M${P.hip[0].toFixed(1)},${P.hip[1].toFixed(1)} Q${P.ctrl[0].toFixed(1)},${P.ctrl[1].toFixed(1)} ${P.sh[0].toFixed(1)},${P.sh[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="10" stroke-linecap="round"/>`:fTorso(P.hip,P.sh,suit))+seg([P.sh,P.neck],6,ink)+`<circle cx="${P.head[0]}" cy="${P.head[1]}" r="10" fill="${ink}"/>`+(()=>{const ux=P.head[0]-P.neck[0],uy=P.head[1]-P.neck[1],u=Math.hypot(ux,uy)||1,fx=-uy/u,fy=ux/u;return `<circle cx="${(P.head[0]-9*fx+3*ux/u).toFixed(1)}" cy="${(P.head[1]-9*fy+3*uy/u).toFixed(1)}" r="5.5" fill="${ink}"/>`})();
   if(p.suit){const h=P.head;s+=`<line x1="${P.sh[0]+5}" y1="${P.sh[1]+3}" x2="${P.sh[0]+6}" y2="${P.sh[1]+26}" stroke="var(--brass)" stroke-width="3.5" stroke-linecap="round"/><path d="M${h[0]-10.5},${h[1]} A10.5 10.5 0 0 1 ${h[0]+8},${h[1]-7} Q${h[0]},${h[1]-4.5} ${h[0]-7},${h[1]+3} Z" fill="var(--hair)"/>`}
-  s+=seg(P.near.leg,8,suit)+seg(P.near.arm,7,suit);
+  s+=seg([P.near.leg[0],lerpP(P.near.leg[0],P.near.leg[1],.5)],11,suit)+seg(P.near.leg,8,suit)+seg(P.near.arm,6,suit);
   if(p.briefcase){const h=P.near.arm[2];s+=`<path d="M${h[0]-4},${h[1]+3} v-4 h8 v4" fill="none" stroke="var(--brass)" stroke-width="2"/><rect x="${h[0]-12}" y="${h[1]+3}" width="24" height="16" rx="2.5" fill="var(--brass)"/><line x1="${h[0]-12}" y1="${h[1]+9}" x2="${h[0]+12}" y2="${h[1]+9}" stroke="var(--bg)" stroke-width="1.2" opacity=".5"/>`}
   const dbE=h=>`<circle cx="${h[0]}" cy="${h[1]}" r="7.5" fill="var(--brass)"/><circle cx="${h[0]}" cy="${h[1]}" r="2.5" fill="var(--bg)"/>`;
   if(p.db==='both') s+=dbE(P.far.arm[2])+dbE(P.near.arm[2]); if(p.db==='n') s+=dbE(P.near.arm[2]);
