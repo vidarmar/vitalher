@@ -425,7 +425,7 @@ const learnList=()=>`<div class="stack">${LEARN.map(a=>`<button class="opt" data
 const todaysRead=()=>LEARN[Math.floor(T0/DAY)%LEARN.length];
 /* ---------- State (example user, marked as sample) ---------- */
 const state = {
-  tab:'today', age:52, length:30, notify:'train', stage:'unsure', impact:true,
+  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true,
   joints:{knee:false,shoulder:false,back:false,bone:false},
   swaps:{},
   history:[],
@@ -540,7 +540,7 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??52,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
 function save(){try{const J=JSON.stringify({stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
 
 /* ---------- Helpers ---------- */
@@ -1184,7 +1184,7 @@ function viewProfile(){
   return `
   <div class="stack"><span class="eyebrow">${state.onboard?'Before you start':'You'}</span><h1>Set it up for your body</h1>
   <p>Tell VitalHer about your stage, your bones and your joints. It swaps in gentler exercises automatically. You can still change any exercise during a session.</p></div>
-  <div class="card"><div class="field"><label for="age"><b>Age</b><br><span class="muted small">Used for age-group comparisons</span></label><input id="age" type="number" inputmode="numeric" min="40" max="90" value="${state.age}"></div></div>
+  <div class="card"><div class="field"><label for="age"><b>Age</b><br><span class="muted small">Starts at 35. Set your own age for accurate heart-rate zones and comparisons</span></label><input id="age" type="number" inputmode="numeric" min="35" max="90" value="${state.age}"></div></div>
   <div class="card stack"><h3>Weight unit</h3>${seg('units',[['kg','Kilograms (kg)'],['lb','Pounds (lb)']])}<p class="muted small">${U()==='lb'?'Dumbbells go up in 5 lb steps, machines in 10 lb steps.':'Dumbbells go up in 2 kg steps, machines in 5 kg steps.'} Weights you\u2019ve already logged are converted.</p></div>
   <div class="card stack"><h3>Your stage</h3>${seg('stage',[['peri','Peri'],['meno','Meno'],['post','Post'],['unsure','Not sure']])}<p class="muted small">${{peri:'Perimenopause: periods are changing or irregular.',meno:'Menopause: about a year since your last period.',post:'Post-menopause: more than a year since your last period.',unsure:'That’s fine. VitalHer works the same, and you can change this any time.'}[state.stage]} The check-in offers a period option in perimenopause.</p></div>
   <div class="card"><h3 style="margin-bottom:4px">Bones</h3>
@@ -1511,7 +1511,7 @@ document.addEventListener('change',ev=>{
   if(ev.target.id==='terms-check'){const b=$('#terms-accept'); if(b) b.disabled=!ev.target.checked; return;}
   const t=ev.target;
   if(t.dataset.joint){state.joints[t.dataset.joint]=t.checked; Object.keys(state.swaps).forEach(k=>delete state.swaps[k]); save();}
-  if(t.id==='age'){const v=+t.value; if(v>=40&&v<=90){state.age=v; save();}}
+  if(t.id==='age'){const v=+t.value; if(v>=35&&v<=90){state.age=v; save();}}
 });
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('#sheet').hidden) closeSheet();});
 render();
