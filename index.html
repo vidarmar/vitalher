@@ -260,6 +260,31 @@ table.cov thead th{font-family:var(--display);font-weight:800}
 .save{font-size:.8rem;font-weight:700;background:var(--brass-soft);color:var(--brass);border-radius:999px;padding:3px 10px;white-space:nowrap}
 .paylinks{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center}.paylinks a{color:var(--accent);text-underline-offset:3px}.paylinks .btn.link{min-height:36px;padding:0;font-size:inherit}
 #sheet .btn[disabled]{opacity:.6}
+.dg{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
+.dg:first-of-type{border-top:0}
+.dgl{font-weight:700}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lv.f5{grid-template-columns:repeat(5,1fr)}
+.lv.f2{grid-template-columns:1fr 1fr}
+.lvb{min-height:44px;border:1px solid var(--line);border-radius:10px;font-weight:700;font-size:.88rem;padding:0 2px;color:var(--ink);background:var(--surface)}
+.lvb[aria-checked="true"],.lvb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lvb.l0[aria-checked="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips .lvb{padding:0 14px}
+.hs{display:grid;gap:2px;align-items:center}
+.hs i{display:block;height:16px;border-radius:3px;background:var(--accent)}
+.hs i.nx{background:transparent;border:1px dashed var(--line)}
+.hs i.z{background:var(--accent-soft);opacity:1}
+.hs i.pd{background:var(--brass)}
+.hs i.tr{background:transparent;position:relative}
+.hs i.tr::after{content:'';position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px;border-radius:50%;background:var(--rest)}
+.dyrow{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+.dyrow .row{font-size:.92rem}
+.dyaxis{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+.dykey{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.8rem;color:var(--muted);align-items:center}
+.dykey i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent);vertical-align:-2px;margin-right:4px}
+.rpframe{width:100%;height:420px;border:1px solid var(--line);border-radius:12px;background:#fff}
+
 #sheet.center{align-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
 #sheet.center .panel{border-radius:18px;max-height:calc(100% - 32px);padding-bottom:22px;box-shadow:0 16px 48px rgba(0,0,0,.28)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -429,7 +454,7 @@ const learnList=()=>`<div class="stack">${LEARN.map(a=>`<button class="opt" data
 const todaysRead=()=>LEARN[Math.floor(T0/DAY)%LEARN.length];
 /* ---------- State (example user, marked as sample) ---------- */
 const state = {
-  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true, ckLog:[], variety:{}, hidden:[], swapsBlock:0,
+  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true, ckLog:[], diary:[], periodTrack:null, reportName:'', dyRange:28, variety:{}, hidden:[], swapsBlock:0,
   joints:{knee:false,shoulder:false,back:false,bone:false},
   swaps:{},
   history:[],
@@ -545,8 +570,8 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{variety:s.variety||{},hidden:Array.isArray(s.hidden)?s.hidden:[],swapsBlock:s.swapsBlock||0,ckLog:Array.isArray(s.ckLog)?s.ckLog:[],ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({variety:state.variety,hidden:state.hidden,swapsBlock:state.swapsBlock,ckLog:state.ckLog,ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{diary:Array.isArray(s.diary)?s.diary:[],periodTrack:s.periodTrack??null,reportName:s.reportName||'',dyRange:s.dyRange||28,variety:s.variety||{},hidden:Array.isArray(s.hidden)?s.hidden:[],swapsBlock:s.swapsBlock||0,ckLog:Array.isArray(s.ckLog)?s.ckLog:[],ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({diary:state.diary,periodTrack:state.periodTrack,reportName:state.reportName,dyRange:state.dyRange,variety:state.variety,hidden:state.hidden,swapsBlock:state.swapsBlock,ckLog:state.ckLog,ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
 
 const COACH={ok:false,reason:''};
 if(NATIVE){ withTimeout(nat('VitalCoach','availability',{}),4000).then(r=>{COACH.ok=!!(r&&r.available); COACH.reason=(r&&r.reason)||''; if(!state.player&&$('#sheet').hidden) render();}).catch(()=>{}); }
@@ -631,6 +656,7 @@ function monthFacts(m){ const f=[`Trainings in the last 30 days: ${m.n} (about $
   if(m.light) f.push(`Light days among them: ${m.light}.`);
   m.lifts.forEach(l=>f.push(`${l[0]}: from ${l[1]} ${l[3]} to ${l[2]} ${l[3]}.`));
   (patterns()||[]).forEach(x=>f.push('Pattern from her check-ins: '+x));
+  {const L=(state.diary||[]).filter(e=>e.d>=T0-30*DAY); if(L.length>=5){ const t=SYM.map(([k,l])=>[l,avgK(L,k)]).filter(x=>x[1]>=.3).map(x=>`${x[0]} ${x[1].toFixed(1)}`); f.push(`Symptom diary, ${L.length} days logged, average out of 3: ${t.join(', ')||'all low'}.`);} }
   if(m.aero!=null) f.push(`Cardio minutes so far this week: ${Math.round(m.aero)} of a 150-minute goal.`);
   return f.join('\n'); }
 async function monthGo(){ const m=monthData(); if(!m.n||!aiOn()){ MONTH={text:monthTemplate(m),ai:false}; render(); return; }
@@ -823,6 +849,148 @@ function relLast(ex){ const o=findSlot(ex.slotId); if(!o) return null;
   for(const p of pool(o)){ if(p.name===ex.name||!(p.unit==='kg'||p.unit==='m')) continue; const L=state.last[p.name]; if(L&&L.w>0) return {w:L.w,u:L.u,name:p.name,f:(ex.f||.8)/(p.f||1)}; }
   return null; }
 function newInBlock(){ if(!blockNo()) return 0; let n=0; ORDER.forEach(s=>exFor(s).forEach(e=>{ if(pool(e).length>1) n++; })); return n; }
+/* Symptom diary: a 30-second daily log, trends over weeks and a report she can give her doctor.
+   Everything stays on the phone. The report leaves only when she shares it herself. */
+const SYM=[['hot','Hot flushes or night sweats'],['sleep','Sleep problems'],['mood','Low mood or irritability'],['anx','Anxiety'],['tired','Tiredness'],['fog','Brain fog or poor focus'],['joints','Joint or muscle aches'],['head','Headaches']];
+const LV=['None','Mild','Moderate','Severe'];
+const FLOW=[['','None'],['spot','Spotting'],['light','Light'],['medium','Medium'],['heavy','Heavy']];
+const TRIG=[['alcohol','Alcohol'],['caffeine','Caffeine after lunch'],['stress','Stressful day'],['spicy','Spicy food'],['walk','Walk or other exercise'],['relax','Relaxation or breathing']];
+const dayOf=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
+const dayBack=k=>dayOf(T0-k*DAY+12*36e5);
+const trackPeriod=()=>state.periodTrack!=null?!!state.periodTrack:(state.stage==='peri'||state.stage==='unsure');
+const diaryGet=d=>(state.diary||[]).find(e=>e.d===d);
+const symName=k=>(SYM.find(x=>x[0]===k)||[k,k])[1];
+const trainedDays=()=>new Set(state.history.map(h=>dayOf(h.d)));
+let DY=null;
+function diarySheet(d){ d=d||T0; const e=diaryGet(d); let pre=false;
+  DY=e?JSON.parse(JSON.stringify(e)):{d,s:{},p:'',t:[],n:''};
+  if(!e&&d===T0){ const ck=(state.ckLog||[]).find(x=>x.d===T0);
+    if(ck){ const m={hot:'hot',tired:'tired',calm:'mood'}; for(const k in m) if(ck.k.includes(k)){DY.s[m[k]]=1;pre=true}
+      if(ck.k.includes('period')&&trackPeriod()){DY.p='medium';pre=true} } }
+  diaryDraw(pre); }
+function diaryDraw(pre){ const d=DY.d, isT=d===T0, yd=dayBack(1), trained=trainedDays().has(d);
+  const row=([k,l])=>{const v=DY.s[k]||0; return `<div class="dg"><span class="dgl">${l}</span><div class="lv" role="radiogroup" aria-label="${l}">${LV.map((t,i)=>`<button class="lvb l${i}" role="radio" aria-checked="${v===i}" data-act="dyset" data-k="${k}" data-v="${i}">${t}</button>`).join('')}</div></div>`;};
+  sheet(`<span class="eyebrow">Symptom diary</span><h2>How was ${isT?'today':'yesterday'}?</h2>
+   <div class="lv f2" role="radiogroup" aria-label="Day"><button class="lvb" role="radio" aria-checked="${isT}" data-act="dyday" data-d="${T0}">Today</button><button class="lvb" role="radio" aria-checked="${!isT}" data-act="dyday" data-d="${yd}">Yesterday</button></div>
+   <p class="muted small">Tap how much each one bothered you. Leave it on None if it didn’t.</p>
+   ${pre?'<p class="small hint">Filled in from your check-in. Change anything that isn’t right.</p>':''}
+   <div>${SYM.map(row).join('')}</div>
+   ${trackPeriod()?`<h3>Period</h3><div class="lv f5" role="radiogroup" aria-label="Period">${FLOW.map(([k,t])=>`<button class="lvb" role="radio" aria-checked="${(DY.p||'')===k}" data-act="dyflow" data-v="${k}">${t}</button>`).join('')}</div>`:''}
+   <h3>Anything else ${isT?'today':'yesterday'}?</h3><p class="muted small">Optional. Over time it shows what makes symptoms better or worse.${trained?' Your training is counted automatically.':''}</p>
+   <div class="chips">${TRIG.map(([k,t])=>`<button class="lvb" aria-pressed="${DY.t.includes(k)}" data-act="dytrig" data-k="${k}">${t}</button>`).join('')}</div>
+   <label for="dy-note" class="small"><b>Note</b> <span class="muted">(optional, included in your doctor report)</span></label>
+   <textarea id="dy-note" class="ta" rows="2" maxlength="200" placeholder="For example: woke three times with night sweats">${esc(DY.n||'')}</textarea>
+   <button class="btn primary" data-act="dysave">Save</button>
+   <button class="btn link" style="align-self:center" data-act="closesheet">Cancel</button>`); }
+function diarySave(){ const n=$('#dy-note'); DY.n=n?n.value.trim().slice(0,200):''; 
+  Object.keys(DY.s).forEach(k=>{if(!DY.s[k]) delete DY.s[k]});
+  state.diary=(state.diary||[]).filter(e=>e.d!==DY.d); state.diary.push(DY); state.diary.sort((a,b)=>a.d-b.d); state.diary=state.diary.slice(-400);
+  save(); closeSheet(); render(); }
+function pick1(t){ t.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-checked',b===t)); }
+function diaryShort(e){ const s=SYM.filter(([k])=>e.s[k]).sort((a,b)=>e.s[b[0]]-e.s[a[0]]).slice(0,3).map(([k,l])=>`${l.toLowerCase()} ${LV[e.s[k]].toLowerCase()}`);
+  return s.length?s.join(', ').replace(/^./,c=>c.toUpperCase())+'.':'No symptoms.'; }
+function todayDiaryCard(){ const e=diaryGet(T0), y=diaryGet(dayBack(1)), any=(state.diary||[]).length;
+  return `<div class="card stack"><div class="row between"><h3>Symptom diary</h3><span class="pill plain">30 sec</span></div>
+   ${e?`<p class="small"><b>Logged today.</b> ${esc(diaryShort(e))}</p><button class="btn ghost" data-act="diary">Edit today</button>`
+     :`<p class="muted small">How were hot flushes, sleep, mood and aches today? After a few weeks you’ll see patterns, and you can share a report with your doctor.</p><button class="btn ghost" data-act="diary">Log today</button>`}
+   ${any&&!y?`<button class="btn link" style="align-self:flex-start" data-act="diary" data-d="${dayBack(1)}">Log yesterday too</button>`:''}</div>`; }
+/* buckets: days (4 weeks) or weeks (8 or 12 weeks), oldest first */
+function buckets(r){ const w=r>28, n=w?r/7:r, out=[];
+  for(let i=n-1;i>=0;i--){ const hi=w?dayBack(i*7):dayBack(i), lo=w?dayBack(i*7+6):hi; out.push({lo,hi,e:(state.diary||[]).filter(e=>e.d>=lo&&e.d<=hi)}); }
+  return out; }
+const avgK=(a,k)=>a.length?a.reduce((p,e)=>p+(e.s[k]||0),0)/a.length:null;
+function cell(v){ return v==null?'<i class="nx"></i>':v<.05?'<i class="z"></i>':`<i style="opacity:${(.25+.75*Math.min(v,3)/3).toFixed(2)}"></i>`; }
+function diaryInsights(){ const L=(state.diary||[]).filter(e=>e.d>=dayBack(55)); if(L.length<10) return [];
+  const out=[], T=trainedDays(), prevDay=e=>dayOf(e.d-12*36e5);
+  const after=L.filter(e=>T.has(prevDay(e))), other=L.filter(e=>!T.has(prevDay(e))&&!T.has(e.d));
+  if(after.length>=4&&other.length>=4) for(const k of ['sleep','mood','tired','joints']){ const a=avgK(after,k), b=avgK(other,k);
+    if(Math.abs(a-b)>=.5){ out.push(`${symName(k)}: ${a.toFixed(1)} on days after a training, ${b.toFixed(1)} on days without one.`); break; } }
+  for(const [t,tl] of [['alcohol','alcohol'],['caffeine','caffeine after lunch'],['spicy','spicy food'],['stress','a stressful day']]){
+    const w=L.filter(e=>e.t.includes(t)), wo=L.filter(e=>!e.t.includes(t)); if(w.length<3||wo.length<3) continue;
+    for(const k of ['hot','sleep','anx']){ const a=avgK(w,k), b=avgK(wo,k); if(a-b>=.5){ out.push(`${symName(k)}: ${a.toFixed(1)} on days with ${tl}, ${b.toFixed(1)} on other days.`); break; } }
+    if(out.length>=3) break; }
+  return out.slice(0,3); }
+function diaryCard(){ const L=state.diary||[], r=state.dyRange||28;
+  if(!L.length) return `<div class="card stack"><h2>Symptoms</h2><p class="muted">Log hot flushes, sleep, mood and aches in the symptom diary on the Today tab. Your trends show up here, and you can make a report for your doctor.</p><button class="btn ghost" data-act="diary">Log today</button></div>`;
+  const B=buckets(r), cols=`grid-template-columns:repeat(${B.length},1fr)`, prev=(state.diary||[]).filter(e=>e.d<dayBack(r-1)&&e.d>=dayBack(2*r-1)), cur=L.filter(e=>e.d>=dayBack(r-1));
+  const shown=SYM.filter(([k])=>cur.some(e=>e.s[k])||prev.some(e=>e.s[k]));
+  const rows=shown.map(([k,l])=>{ const a=avgK(cur,k), b=prev.length>=5?avgK(prev,k):null;
+    const tr=a==null||b==null?'':Math.abs(a-b)<.3?'steady':a<b?'▼ easing':'▲ stronger';
+    return `<div class="dyrow"><div class="row between"><b>${l}</b><span class="muted num">${a==null?'':`avg ${a.toFixed(1)}`}${tr?` · ${tr}`:''}</span></div><div class="hs" style="${cols}" aria-hidden="true">${B.map(x=>cell(x.e.length?avgK(x.e,k):null)).join('')}</div></div>`; }).join('');
+  const per=trackPeriod()||cur.some(e=>e.p);
+  const prow=per?`<div class="dyrow"><b>Period</b><div class="hs" style="${cols}" aria-hidden="true">${B.map(x=>x.e.some(e=>e.p)?'<i class="pd"></i>':x.e.length?'<i class="z"></i>':'<i class="nx"></i>').join('')}</div></div>`:'';
+  const T=trainedDays(), trow=`<div class="dyrow"><b>Strength training</b><div class="hs" style="${cols}" aria-hidden="true">${B.map(x=>{let c=0; T.forEach(d=>{if(d>=x.lo&&d<=x.hi)c++}); return c?`<i class="tr" title="${c}"></i>`:'<i class="nx" style="border-color:transparent"></i>'}).join('')}</div></div>`;
+  const ins=diaryInsights(), logged=cur.length;
+  return `<div class="card stack"><div class="row between"><h2>Symptoms</h2><span class="pill plain">${logged} day${logged===1?'':'s'} logged</span></div>
+   <div class="lv" style="grid-template-columns:repeat(3,1fr)" role="radiogroup" aria-label="Period shown">${[[28,'4 weeks'],[56,'8 weeks'],[84,'12 weeks']].map(([v,t])=>`<button class="lvb" role="radio" aria-checked="${r===v}" data-act="dyrange" data-v="${v}">${t}</button>`).join('')}</div>
+   ${rows||'<p class="muted">No symptoms logged in this period. Good news, or time to log a few days.</p>'}${prow}${trow}
+   <div class="dyaxis"><span>${r>28?`${r/7} weeks ago`:'4 weeks ago'}</span><span>${r>28?'This week':'Today'}</span></div>
+   <div class="dykey"><span><i style="opacity:.25"></i>Mild</span><span><i style="opacity:.6"></i>Moderate</span><span><i></i>Severe</span>${per?'<span><i style="background:var(--brass)"></i>Period</span>':''}<span><i style="background:transparent;border:1px dashed var(--line)"></i>Not logged</span></div>
+   ${r>28?'<p class="muted small">Each square is the weekly average.</p>':''}
+   ${ins.length?`<h3>Things that go together</h3><ul class="paylist">${ins.map(x=>`<li>${x}</li>`).join('')}</ul><p class="muted small">Scores from 0 (none) to 3 (severe). These are patterns in your own log, not proof of cause.</p>`:L.length<10?'<p class="muted small">After 10 logged days, VitalHer looks for things that go together, like sleep after training days.</p>':''}
+   <button class="btn primary" data-act="report">Report for your doctor</button>
+   <p class="muted small">Stored only on your phone.</p></div>`; }
+/* ---- Report for her doctor: plain HTML tables so the iPhone can turn it into a PDF ---- */
+const fmtS=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+const fmtL=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+function periodEpisodes(L){ const days=L.filter(e=>e.p&&e.p!=='spot').map(e=>e.d), starts=[];
+  days.forEach(d=>{ if(!starts.length||d-starts[starts.length-1].last>3*DAY) starts.push({start:d,last:d,n:1}); else {const s=starts[starts.length-1]; s.last=d; s.n++;} }); return starts; }
+function diaryReport(r){ const all=state.diary||[], first=all.length?all[0].d:T0;
+  let wk=r/7; while(wk>1&&dayBack(wk*7-1+0)<first&&dayBack((wk-1)*7)<first) wk--;   /* drop whole weeks before her first entry */
+  r=wk*7; const from=dayBack(r-1), L=all.filter(e=>e.d>=from), half=dayBack(Math.floor(r/2)-1);
+  const A=L.filter(e=>e.d<half), Bh=L.filter(e=>e.d>=half);
+  const weeks=[]; for(let i=r/7-1;i>=0;i--){ const hi=dayBack(i*7), lo=dayBack(i*7+6); weeks.push({lo,hi,e:L.filter(e=>e.d>=lo&&e.d<=hi)}); }
+  const col=v=>{ if(v==null) return '#FFFFFF'; const a=Math.min(v,3)/3, m=(x,y)=>Math.round(x+(y-x)*a); return v<.05?'#F1F2E8':`rgb(${m(233,86)},${m(234,89)},${m(217,62)})`; };
+  const ink=v=>v!=null&&v>=1.6?'#FFFFFF':'#2B2520';
+  const used=SYM.filter(([k])=>L.some(e=>e.s[k]));
+  const td='style="border:1px solid #D9CFC5;padding:4px 6px;font-size:10pt"';
+  const sumRows=used.map(([k,l])=>{ const a=avgK(L,k), sev=L.filter(e=>(e.s[k]||0)>=2).length, x=avgK(A,k), y=avgK(Bh,k);
+    return `<tr><td ${td}>${l}</td><td ${td} align="center">${a.toFixed(1)}</td><td ${td} align="center">${sev}</td><td ${td} align="center">${x==null||y==null?'–':`${x.toFixed(1)} → ${y.toFixed(1)}`}</td></tr>`; }).join('');
+  const wkHead=weeks.map(w=>`<td style="border:1px solid #D9CFC5;padding:2px;font-size:7.5pt;text-align:center">${fmtS(w.lo)}</td>`).join('');
+  const wkRows=used.map(([k,l])=>`<tr><td style="border:1px solid #D9CFC5;padding:2px 4px;font-size:8.5pt">${l}</td>${weeks.map(w=>{const v=w.e.length?avgK(w.e,k):null; return `<td bgcolor="${col(v)}" style="border:1px solid #D9CFC5;background:${col(v)};color:${ink(v)};padding:2px;font-size:8pt;text-align:center">${v==null?'':v.toFixed(1)}</td>`}).join('')}</tr>`).join('');
+  const T=trainedDays(), trRow=`<tr><td style="border:1px solid #D9CFC5;padding:2px 4px;font-size:8.5pt">Strength trainings</td>${weeks.map(w=>{let c=0; T.forEach(d=>{if(d>=w.lo&&d<=w.hi)c++}); return `<td style="border:1px solid #D9CFC5;padding:2px;font-size:8pt;text-align:center">${c}</td>`}).join('')}</tr>`;
+  const loggedRow=`<tr><td style="border:1px solid #D9CFC5;padding:2px 4px;font-size:8.5pt">Days logged</td>${weeks.map(w=>`<td style="border:1px solid #D9CFC5;padding:2px;font-size:8pt;text-align:center">${w.e.length}</td>`).join('')}</tr>`;
+  const ep=periodEpisodes(L), spot=L.filter(e=>e.p==='spot').length, heavy=L.filter(e=>e.p==='heavy').length;
+  const per=ep.length||spot?`<h2>Bleeding</h2><p>${ep.length?`Periods started: ${ep.map((p,i)=>`${fmtS(p.start)} (${p.n} day${p.n>1?'s':''})${i?`, ${Math.round((p.start-ep[i-1].start)/DAY)} days after the one before`:''}`).join('; ')}.`:'No periods logged.'}${heavy?` Heavy days: ${heavy}.`:''}${spot?` Spotting days: ${spot}.`:''}</p>`
+    :trackPeriod()?'<h2>Bleeding</h2><p>No bleeding logged in this period.</p>':'';
+  const tc=TRIG.map(([k,t])=>[t,L.filter(e=>e.t.includes(k)).length]).filter(x=>x[1]);
+  const sl=(state.ckLog||[]).filter(e=>e.d>=from&&e.sl!=null).map(e=>e.sl), slAvg=sl.length>=3?sl.reduce((a,b)=>a+b,0)/sl.length:null;
+  const notes=L.filter(e=>e.n).slice(-15);
+  const stage={peri:'Perimenopause',meno:'Menopause',post:'Post-menopause',unsure:'Not stated'}[state.stage]||'Not stated';
+  const ins=diaryInsights();
+  return `<!doctype html><html><head><meta charset="utf-8"><title>VitalHer symptom report</title><style>
+   body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#2B2520;font-size:10.5pt;line-height:1.4;margin:0}
+   h1{font-family:Georgia,'Times New Roman',serif;font-size:18pt;margin:0 0 2px;color:#56593E} h2{font-size:12pt;margin:16px 0 6px;color:#56593E}
+   p{margin:4px 0} table{border-collapse:collapse;width:100%} .m{color:#665B52;font-size:9pt}
+   @page{size:A4;margin:14mm}
+  </style></head><body>
+  <h1>Symptom report</h1><p class="m">From the VitalHer app · ${fmtL(from)} to ${fmtL(T0)}</p>
+  <table style="margin-top:8px"><tr>${state.reportName?`<td ${td}><b>Name</b><br>${esc(state.reportName)}</td>`:''}<td ${td}><b>Age</b><br>${state.age}</td><td ${td}><b>Stage (her own)</b><br>${stage}</td><td ${td}><b>Days logged</b><br>${L.length} of ${r}</td></tr></table>
+  <h2>Summary</h2>
+  ${used.length?`<table><tr><td ${td}><b>Symptom</b></td><td ${td} align="center"><b>Average</b></td><td ${td} align="center"><b>Moderate or severe days</b></td><td ${td} align="center"><b>First half → second half</b></td></tr>${sumRows}</table>
+  <p class="m">Scores: 0 none, 1 mild, 2 moderate, 3 severe, averaged over the days she logged.</p>`:'<p>No symptoms logged in this period.</p>'}
+  ${used.length?`<h2>Week by week</h2><table><tr><td style="border:1px solid #D9CFC5;padding:2px 4px;font-size:8pt"><b>Week starting</b></td>${wkHead}</tr>${wkRows}${loggedRow}${trRow}</table>`:''}
+  ${per}
+  ${tc.length||slAvg!=null?`<h2>Lifestyle</h2><p>${tc.length?'Days logged with: '+tc.map(x=>`${x[0].toLowerCase()} ${x[1]}`).join(', ')+'.':''}${slAvg!=null?` Average sleep before training days, from Apple Health: ${Math.floor(slAvg/60)} h ${Math.round(slAvg%60)} min.`:''}</p>`:''}
+  ${ins.length?`<h2>Patterns she noticed</h2><p>${ins.join(' ')}</p><p class="m">Patterns in her own log, not proof of cause.</p>`:''}
+  ${notes.length?`<h2>Her notes</h2><table>${notes.map(e=>`<tr><td ${td} width="70">${fmtS(e.d)}</td><td ${td}>${esc(e.n)}</td></tr>`).join('')}</table>`:''}
+  <p class="m" style="margin-top:18px">Self-reported in VitalHer, a strength training app. This report is not a diagnosis or medical advice. Made on ${fmtL(Date.now())}.</p>
+  </body></html>`; }
+function reportSheet(r){ const L=state.diary||[]; if(!r){ const span=L.length?(T0-L[0].d)/DAY:0; r=span>56?84:span>28?56:28; }
+  state.rpRange=r; const html=diaryReport(r);
+  sheet(`<span class="eyebrow">Symptom diary</span><h2>Report for your doctor</h2>
+   <p class="muted small">A one- or two-page summary of your symptoms, periods and training. Take it to an appointment or send it before. It leaves your phone only when you share it.</p>
+   <div class="lv" style="grid-template-columns:repeat(3,1fr)" role="radiogroup" aria-label="Weeks in the report">${[[28,'4 weeks'],[56,'8 weeks'],[84,'12 weeks']].map(([v,t])=>`<button class="lvb" role="radio" aria-checked="${r===v}" data-act="rprange" data-v="${v}">${t}</button>`).join('')}</div>
+   <label for="rp-name" class="small"><b>Your name on the report</b> <span class="muted">(optional)</span></label>
+   <input id="rp-name" class="ta" style="min-height:48px" value="${esc(state.reportName||'')}" autocomplete="name">
+   <iframe class="rpframe" title="Report preview" srcdoc="${esc(html)}"></iframe>
+   <button class="btn primary" data-act="rpshare">${NATIVE?'Share as PDF':'Print or save as PDF'}</button>
+   <button class="btn link" style="align-self:center" data-act="closesheet">Close</button>`); }
+async function reportShare(){ const n=$('#rp-name'); if(n){ state.reportName=n.value.trim().slice(0,60); save(); }
+  const html=diaryReport(state.rpRange||28);
+  if(NATIVE){ try{ await nat('VitalReport','share',{html,fileName:`VitalHer report ${(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)(new Date(T0))}.pdf`}); }
+    catch(e){ sheet(`<h2>Couldn’t make the PDF</h2><p>Please try again. If it keeps failing, take a screenshot of the preview instead.</p><button class="btn ghost" data-act="report">Back</button>`); } return; }
+  const f=document.querySelector('.rpframe'); if(f){ f.srcdoc=html; setTimeout(()=>{ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){} },300); } }
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
@@ -1250,6 +1418,7 @@ function viewTodayInner(){
     <div class="row between"><h3>Your three numbers</h3><button class="btn link" data-tab="progress">Details</button></div>
     ${threeNumbers()}
   </div>
+  ${todayDiaryCard()}
   <div class="card stack">
     <div class="row between"><h3>Walking and cardio</h3><span class="pill plain num">Goal 150 min/wk</span></div>
     ${HEALTH.aero!=null?`<div class="bands" aria-hidden="true"><div class="on" style="flex:${Math.min(150,HEALTH.aero)}"></div><div style="flex:${Math.max(0,150-HEALTH.aero)}"></div></div><p class="small"><b class="num">${Math.round(HEALTH.aero)}</b> of 150 minutes this week, from your workouts and brisk walks in Apple Health.</p>`
@@ -1468,6 +1637,7 @@ function viewProgress(){
     <p>Two trainings a week keep your muscle. Three build it. Showing up week after week matters more than any single workout.</p>
   </div>
   ${monthCard()}
+  ${diaryCard()}
   ${patternCard()}
   <div class="card stack"><h3>Stronger since you started</h3>
     ${lifts.length?`<ol class="exlist">${lifts.map(l=>`<li style="grid-template-columns:1fr auto"><span>${l[0]}</span><span class="num"><span class="muted">${l[1]} \u2192</span> <b>${l[2]} ${U()}</b></span></li>`).join('')}</ol>`:'<p class="muted">Log a few trainings and your strength progress appears here, from your first weights to today.</p>'}
@@ -1487,6 +1657,7 @@ function viewProfile(){
     <textarea id="plan-text" class="ta" rows="3" placeholder="For example: Tuesday, Thursday and Saturday, about 30 minutes at home with dumbbells. My knees are a bit sore."></textarea>
     <button class="btn primary" data-act="plango">Fill in my plan</button></div>
   <div class="card stack"><h3>Your stage</h3>${seg('stage',[['peri','Peri'],['meno','Meno'],['post','Post'],['unsure','Not sure']])}<p class="muted small">${{peri:'Perimenopause: periods are changing or irregular.',meno:'Menopause: about a year since your last period.',post:'Post-menopause: more than a year since your last period.',unsure:'That’s fine. VitalHer works the same, and you can change this any time.'}[state.stage]} The check-in offers a period option in perimenopause.</p></div>
+  <div class="card"><label class="switch" for="ptrack"><span><b>Track periods in the symptom diary</b><br><span class="muted small">On by default in perimenopause and if you’re not sure. Turn it on whenever you still have bleeding.</span></span><input type="checkbox" id="ptrack" data-pref="periodTrack" ${trackPeriod()?'checked':''}></label></div>
   <div class="card"><h3 style="margin-bottom:4px">Bones</h3>
     ${sw('bone','Spine-safe mode','For osteoporosis, osteopenia or a past fracture of the spine. No loaded forward bending, and impact at walking level.')}
     <label class="switch" for="impact"><span><b>Bone bursts</b><br><span class="muted small">2–3 minutes of heel drops or small hops at the start of each session.${state.joints.bone?' In spine-safe mode they become brisk marching.':''}</span></span><input type="checkbox" id="impact" data-pref="impact" ${state.impact?'checked':''}></label>
@@ -1794,7 +1965,7 @@ document.addEventListener('click',ev=>{
     case 'sub-plans': paywall(null); break;
     case 'sub-restore': STORE.next=null; paywall(null); payRestore(); break;
     case 'sub-manage': nat('JarlStore','manage').then(()=>nat('JarlStore','entitlement')).then(e=>{setSub(e); render();}).catch(()=>{}); break;
-    case 'reset': if(!state.resetArm){state.resetArm=true; render(); setTimeout(()=>{state.resetArm=false},5000); break;} try{localStorage.removeItem('vitalher-v1');localStorage.removeItem('vitalher-welcome')}catch(e){} location.reload(); break;
+    case 'reset': if(!state.resetArm){state.resetArm=true; render(); setTimeout(()=>{state.resetArm=false},5000); break;} try{localStorage.removeItem('vitalher-v1');localStorage.removeItem('vitalher-welcome')}catch(e){} (NATIVE?nat('Preferences','remove',{key:'vitalher-v1'}).catch(()=>{}):Promise.resolve()).then(()=>location.reload()); break;
     case 'terms-close': termsClose(); break;
     case 'terms-decline': termsClose(); sheet(`<h2>You can look, but not train yet</h2><p>To use VitalHer, you need to accept the User Agreement. You can read it any time from the welcome screen or the You tab.</p><button class="btn ghost" data-act="closesheet">OK</button>`); break;
     case 'terms-accept': { if(!$('#terms-check')||!$('#terms-check').checked) break; state.terms={version:TERMS_VERSION,at:Date.now()}; save(); const nx=termsNext; termsClose();
@@ -1821,6 +1992,16 @@ document.addEventListener('click',ev=>{
     case 'month': monthGo(); break;
     case 'plango': planGo(); break;
     case 'planuse': planUse(); break;
+    case 'diary': diarySheet(t.dataset.d?+t.dataset.d:T0); break;
+    case 'dyday': diarySheet(+t.dataset.d); break;
+    case 'dyset': DY.s[t.dataset.k]=+t.dataset.v; pick1(t); break;
+    case 'dyflow': DY.p=t.dataset.v; pick1(t); break;
+    case 'dytrig': {const k=t.dataset.k, on=!DY.t.includes(k); DY.t=on?[...DY.t,k]:DY.t.filter(x=>x!==k); t.setAttribute('aria-pressed',on); break;}
+    case 'dysave': diarySave(); break;
+    case 'dyrange': state.dyRange=+t.dataset.v; save(); render(); break;
+    case 'report': reportSheet(); break;
+    case 'rprange': {const n=$('#rp-name'); if(n){state.reportName=n.value.trim().slice(0,60); save();} reportSheet(+t.dataset.v); break;}
+    case 'rpshare': reportShare(); break;
     case 'vpick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.variety=state.variety||{}; state.variety[e.id]={i:+t.dataset.v,block:blockNo()}; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
     case 'vhide': {const e=exFor(P?P.s:currentS())[+t.dataset.i], n=baseFor(e).name; state.hidden=[...new Set([...(state.hidden||[]),n])]; if(state.variety) delete state.variety[e.id]; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
     case 'vunhide': state.hidden=(state.hidden||[]).filter(x=>x!==t.dataset.n); save(); render(); break;
