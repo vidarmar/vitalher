@@ -716,6 +716,50 @@ function patternCard(){ const P=patterns(), n=(state.ckLog||[]).length;
   return `<div class="card stack"><div class="row between"><h3>How you’ve felt</h3><span class="pill plain">${n} check-in${n===1?'':'s'}</span></div>
    ${P?`<ul class="paylist">${P.map(x=>`<li>${x}</li>`).join('')}</ul><p class="muted small">From your own check-ins before each training. Stored only on your phone.</p>`
      :`<p class="muted">After 6 check-ins, patterns appear here: hot-flush days, low-energy days and how they link to your sleep.</p>`}</div>`; }
+/* Mood in her own words: the coach picks a session type from a fixed menu; the rules set the training */
+let MOOD=null;
+const MOODS={
+  full:{t:'Your normal session',d:'Sounds like a good day for your planned training.',ck:{}},
+  strong:{t:'Strong day',d:'An extra set on the main lifts, and a step up where you were close to the top last time.',ck:{strong:true}},
+  light:{t:'Light day',d:'Two sets per exercise at last time’s weights. Showing up is what counts.',ck:{tired:true}},
+  calm:{t:'Calmer session',d:'No impact work, longer rests and two minutes of slow breathing at the end. Moving often helps when your head is busy.',ck:{calm:true}},
+  cool:{t:'Cooler session',d:'Longer rests and no cardio finisher. Keep cold water and a fan close.',ck:{hot:true}},
+  mobility:{t:'Mobility instead',d:'Today the 10-minute mobility routine may suit you better than lifting. Your training can wait until tomorrow.',alt:'mobility'},
+  walk:{t:'A walk instead',d:'A brisk 20 to 30 minute walk outdoors counts towards your 150 minutes. You can train another day this week.',alt:'walk'},
+  rest:{t:'Rest today',d:'If you feel unwell, rest is the right training today. Come back when you feel better. If you feel very unwell or it doesn’t improve, contact your doctor.',alt:'rest'}};
+function readMood(text){ const s=text.toLowerCase(), m={choice:'full',short:false,hot:false,sore:[]};
+  if(/knee/.test(s)) m.sore.push('knee'); if(/shoulder|elbow|neck/.test(s)) m.sore.push('shoulder'); if(/\bback\b|spine|\bhips?\b|sciatic/.test(s)) m.sore.push('back');
+  m.hot=/hot flush|flush|sweat|overheat|too hot|so hot|boiling/.test(s);
+  m.short=/short on time|no time|busy day|rushed|quick one|only \d+ ?min|\d+ ?min(ute)?s? only|in a hurry/.test(s);
+  const rx=[['rest',/\bsick\b|\bill\b|fever|\bflu\b|covid|virus|migraine|vomit|stomach bug/],
+    ['light',/exhaust|wiped|drained|no energy|low energy|so tired|really tired|knackered|barely slept|didn.?t sleep|did not sleep|bad night|awful night|insomnia|fatigue/],
+    ['calm',/anxious|anxiety|stress|overwhelm|\blow\b|\bdown\b|\bsad\b|irritab|grumpy|teary|crying|\bflat\b|worried|on edge|wound up/],
+    ['mobility',/too (sore|stiff) to|just (want to )?stretch|stiff all over|aching all over|sore all over/],
+    ['walk',/\bwalk\b|fresh air|get outside|outdoors/],
+    ['strong',/strong|great|energ(etic|ised|ized)|full of beans|motivated|ready to go|fantastic|brilliant|amazing|really good/]];
+  for(const [k,r] of rx){ if(r.test(s)){ m.choice=k; break; } }
+  if(m.choice==='full'&&m.hot) m.choice='cool';
+  return m; }
+function moodCk(m){ const ck={...(MOODS[m.choice].ck||{})}; if(m.short) ck.short=true; if(m.hot) ck.hot=true; m.sore.forEach(j=>ck[j]=true); return ck; }
+async function moodGo(s){ const box=$('#mood-text'), text=box?box.value.trim():''; if(!text) return;
+  if(RED.test(text)) return redSheet();
+  const k=readMood(text); let m=k, reply='', ai=false;
+  if(aiOn()){ sheet('<h2>Your coach is thinking…</h2><p class="muted">Apple Intelligence is reading what you wrote, on your iPhone.</p>',true);
+    try{ const r=await withTimeout(nat('VitalCoach','mood',{text}),15000);
+      if(r){ m={choice:MOODS[r.choice]?r.choice:k.choice, short:!!r.short||k.short, hot:!!r.hot||k.hot,
+        sore:[...new Set([...(Array.isArray(r.sore)?r.sore:[]).filter(j=>AREA[j]),...k.sore])]}; ai=true; const c=cleanAI(r.reply,260); if(c) reply=c; } }catch(e){} }
+  if(m.choice==='cool'&&!m.hot) m.hot=true;
+  MOOD={s,m,ck:moodCk(m),text}; moodSheet(reply,ai); }
+function moodSheet(reply,ai){ const {s,m,ck}=MOOD, M=MOODS[m.choice], extra=[];
+  if(!M.alt){ if(m.hot&&m.choice!=='cool') extra.push('Longer rests and no cardio finisher, to keep you cooler.'); if(m.short) extra.push('The 20-minute version.');
+    if(m.sore.length) extra.push(`Gentler versions for your ${m.sore.map(j=>AREA[j].toLowerCase()).join(' and ')}.`); }
+  const btns=M.alt==='mobility'?`<button class="btn primary" data-act="moodmob">Show the mobility routine</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Train anyway</button>`
+    :M.alt?`<button class="btn primary" data-act="moodok">OK</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Train anyway</button>`
+    :`<button class="btn primary" data-act="moodstart" data-s="${s}">Start ${TN(s)}</button><button class="btn ghost" data-act="moodedit" data-s="${s}">Change it</button>`;
+  sheet(`<span class="eyebrow">Your coach suggests</span><h2>${m.choice==='full'&&extra.length?'Your session, adjusted':M.t}</h2>
+   ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
+   <p>${m.choice==='full'&&extra.length?extra.join(' '):M.d+(extra.length?' '+extra.join(' '):'')}</p>
+   ${btns}`,true); }
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
@@ -1421,14 +1465,18 @@ const TIPS=['Protein helps muscle repair. Include some with every meal: fish, eg
  'Squeeze your pelvic floor before you lift or jump, and breathe out as you push.',
  'Balance work protects against falls. Try standing on one leg while you brush your teeth.'];
 let CK={};
-function checkinSheet(s){
+function checkinSheet(s,preset){
   CK={calm:false,strong:false,knee:false,shoulder:false,back:false,tired:false,hot:false,short:false,period:false};
-  const RD=readiness(); if(RD&&RD.low) CK.tired=true;
+  if(preset) Object.assign(CK,preset);
+  const RD=readiness(); if(RD&&RD.low&&!preset) CK.tired=true;
   const o=(k,t,d)=>`<button class="opt" data-act="ck" data-k="${k}" aria-pressed="${!!CK[k]}"><b>${t}</b><span class="muted small">${d}</span></button>`;
   const peri=state.stage==='peri'||state.stage==='unsure';
   sheet(`<span class="eyebrow">Before ${TN(s)}</span><h2>How are you today?</h2><p class="muted">Tap anything that fits. VitalHer adjusts today’s training only.</p>
    ${RD&&RD.low?`<p class="small hint"><b>Apple Health:</b> ${RD.bits.join(' and ')}. A light day is ticked for you. Untick it if you feel fine.</p>`:HEALTH.sleep!=null?`<p class="small hint">Apple Health: <b class="num">${Math.floor(HEALTH.sleep/60)} h ${Math.round(HEALTH.sleep%60)} min</b> of sleep last night.${HEALTH.sleep<360?' Under 6 hours: a light day may feel better today.':''}</p>`:''}
-   <h3>Today</h3>
+   <label for="mood-text" class="small"><b>Anything else? Tell your coach</b></label>
+   <textarea id="mood-text" class="ta" rows="2" placeholder="For example: anxious about work and a bit achy in the hips, but I want to move"></textarea>
+   <button class="btn ghost" data-act="moodgo" data-s="${s}">Suggest my session</button>
+   <h3>Or tap what fits</h3>
    <div class="stack">${o('strong','Feeling strong','An extra set on the main lifts, and a step up where you’re close')}${o('tired','Low energy or slept badly','Light day: two sets per exercise')}${o('hot','Hot flushes or feeling overheated','Cooler session: longer rests, no cardio finisher')}${o('calm','Stressed or low','Calmer session: no impact, longer rests, slow breathing at the end')}${o('short','Short on time','The 20-minute version')}${peri?o('period','Period pain or heavy bleeding','Light day without impact work'):''}</div>
    <h3>Sore or stiff</h3>
    <div class="ckgrid">${o('knee','Knees','Knee-friendly versions')}${o('shoulder','Shoulders','Shoulder-friendly versions')}${o('back','Lower back','Back-friendly versions')}</div>
@@ -1692,6 +1740,11 @@ document.addEventListener('click',ev=>{
     case 'month': monthGo(); break;
     case 'plango': planGo(); break;
     case 'planuse': planUse(); break;
+    case 'moodgo': moodGo(t.dataset.s); break;
+    case 'moodstart': {const ck={...MOOD.ck}; closeSheet(); startSession(t.dataset.s,ck); break;}
+    case 'moodedit': checkinSheet(t.dataset.s,MOOD?MOOD.ck:null); break;
+    case 'moodmob': logCheckin(MOOD.ck); mobilitySheet(); break;
+    case 'moodok': logCheckin(MOOD.ck); closeSheet(); break;
     case 'toggleanim': toggleAnim(t.querySelector('svg')); break;
     case 'allowhealth': { const done=()=>{state.health.connected=true; save(); closeSheet(); if(state.player){state.player.lastT=Date.now(); renderPlayer()} else render(); loadHealth();};
       if(NATIVE){ t.disabled=true; t.textContent='Asking Apple Health\u2026'; let answered=false;
