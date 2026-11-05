@@ -429,7 +429,7 @@ const learnList=()=>`<div class="stack">${LEARN.map(a=>`<button class="opt" data
 const todaysRead=()=>LEARN[Math.floor(T0/DAY)%LEARN.length];
 /* ---------- State (example user, marked as sample) ---------- */
 const state = {
-  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true, ckLog:[],
+  tab:'today', age:35, length:30, notify:'train', stage:'unsure', impact:true, ai:true, ckLog:[], variety:{}, hidden:[], swapsBlock:0,
   joints:{knee:false,shoulder:false,back:false,bone:false},
   swaps:{},
   history:[],
@@ -545,8 +545,8 @@ function subCard(){
 if(NATIVE){ try{ CAP.addListener('JarlStore','entitlement',(d)=>{ const x=(d&&d.active!=null)?d:(d&&d.data)||null; if(x){ setSub(x); if(!state.player&&$('#sheet').hidden) render(); } }); }catch(e){}
   setTimeout(()=>loadStore().then(()=>{ if(!state.player&&$('#sheet').hidden) render(); }),300);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) nat('JarlStore','entitlement').then(e=>{ setSub(e); if(!state.player&&$('#sheet').hidden) render(); }).catch(()=>{}); }); }
-try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{ckLog:Array.isArray(s.ckLog)?s.ckLog:[],ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
-function save(){try{const J=JSON.stringify({ckLog:state.ckLog,ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('vitalher-v1')||'null'); if(s){Object.assign(state,{variety:s.variety||{},hidden:Array.isArray(s.hidden)?s.hidden:[],swapsBlock:s.swapsBlock||0,ckLog:Array.isArray(s.ckLog)?s.ckLog:[],ai:s.ai!==false,stage:s.stage||'unsure',impact:s.impact!==false,age:s.age??35,length:s.length??30,notify:s.notify??'train',joints:s.joints||state.joints,swaps:s.swaps||{},health:s.health||{connected:false},scheme:s.scheme||'olive',hrMed:!!s.hrMed,textSize:s.textSize||'m',equip:s.equip||'gym',warm:s.warm||3,workDark:s.workDark?1:0,units:s.units||state.units,days:s.days||[0,2,4],terms:s.terms||null,weekOverride:s.weekOverride||null,hrdev:s.hrdev||null}); if(s.history&&s.history.length) state.history=s.history; if(s.last) Object.assign(state.last,s.last); if(s.first) state.first=s.first;}}catch(e){}
+function save(){try{const J=JSON.stringify({variety:state.variety,hidden:state.hidden,swapsBlock:state.swapsBlock,ckLog:state.ckLog,ai:state.ai,stage:state.stage,impact:state.impact,hrdev:state.hrdev||null,first:state.first,workDark:state.workDark,units:state.units,hrMed:state.hrMed,textSize:state.textSize,equip:state.equip,warm:state.warm,terms:state.terms,days:state.days,weekOverride:state.weekOverride,scheme:state.scheme,health:state.health,age:state.age,length:state.length,notify:state.notify,joints:state.joints,swaps:state.swaps,history:state.history,last:state.last}); localStorage.setItem('vitalher-v1',J); if(NATIVE) nat('Preferences','set',{key:'vitalher-v1',value:J}).catch(()=>{});}catch(e){}}
 
 const COACH={ok:false,reason:''};
 if(NATIVE){ withTimeout(nat('VitalCoach','availability',{}),4000).then(r=>{COACH.ok=!!(r&&r.available); COACH.reason=(r&&r.reason)||''; if(!state.player&&$('#sheet').hidden) render();}).catch(()=>{}); }
@@ -607,7 +607,7 @@ function applySore(j,i,reply,ai,level){ const P=state.player; if(!P) return; lev
     sheet(`<span class="eyebrow">Mild: ${level} out of 10</span><h2>Keep going, a little lighter</h2><p>Stay with <b>${esc(r0.name)}</b>${r0.unit==='kg'||r0.unit==='m'?' with about 20% less weight':''}, and move slowly through the part that pinches. Stop if it gets worse.</p>
      ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}<button class="btn primary" data-act="hurtback" data-i="${i}">Back to training</button>`); return; }
   P.sore[j]=true;
-  exFor(P.s).forEach(e=>{ if(e.alts.some(a=>a.for===j)) delete state.swaps[e.id]; }); save();
+  exFor(P.s).forEach(e=>{ if(baseFor(e).alts.some(a=>a.for===j)) delete state.swaps[e.id]; }); save();
   const e=exFor(P.s)[i], r=resolve(e), n=exFor(P.s).filter(x=>resolve(x).altFor===j).length;
   const main=r.alt&&r.altFor===j?`<b>${esc(e.name)}</b> is now <b>${esc(r.name)}</b> for the rest of today.`:`There’s no ${AREA[j].toLowerCase()}-friendly version of <b>${esc(r.name)}</b>. Use a lighter weight or skip it today.`;
   sheet(`<span class="eyebrow">${AREA[j]}-friendly today</span><h2>${level>=7?'Skip it today':'Swapped'}</h2><p>${level>=7?`The rest of today’s session uses ${AREA[j].toLowerCase()}-friendly versions where there are some.`:main}${level<7&&n>1?` ${n} exercises in today’s session now use ${AREA[j].toLowerCase()}-friendly versions.`:''}</p>
@@ -760,6 +760,69 @@ function moodSheet(reply,ai){ const {s,m,ck}=MOOD, M=MOODS[m.choice], extra=[];
    ${reply?`<p class="coach rest">${esc(reply)}${ai?aiTag:''}</p>`:''}
    <p>${m.choice==='full'&&extra.length?extra.join(' '):M.d+(extra.length?' '+extra.join(' '):'')}</p>
    ${btns}`,true); }
+/* Variety. Each exercise slot has a pool: the original plus two variants for the same muscles.
+   A new block every 6 weeks (after the lighter week) moves to the next variant. She can also pick another
+   variant for the rest of the block, or hide an exercise for good. Joint, spine and home filters still apply. */
+const VAR={
+ goblet:[{name:'Dumbbell sumo squat',start:10,f:1.1,cue:'Feet wide, toes turned out, one dumbbell held between your legs. Sit straight down with your knees following your toes, then stand tall.'},
+   {name:'Dumbbell front squat',start:6,f:.8,cue:'A dumbbell resting on each shoulder, elbows forward. Sit down between your heels with your chest up, then drive back up.'}],
+ bench:[{name:'Alternating dumbbell bench press',start:6,f:.9,cue:'Press one dumbbell up while the other waits at your chest, then switch. Your trunk works to keep you steady.'},
+   {name:'Close-grip dumbbell press',start:6,f:.9,cue:'Dumbbells touching, palms facing each other. Lower to your chest with elbows close to your sides, then press up. Works the back of the arms more.'}],
+ row:[{name:'Bent-over dumbbell row',start:6,f:.8,each:false,cue:'Soft knees, hinge forward with a flat back, dumbbells hanging. Pull both towards your hips and squeeze your shoulder blades together.',
+     alts:[{for:'back',name:'Chest-supported row',start:5,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.'},{for:'bone',name:'Chest-supported row',start:5,cue:'Lie face down on an incline bench and row both dumbbells. The bench supports your spine.'}]},
+   {name:'Chest-supported row',start:5,f:.7,each:false,cue:'Lie face down on an incline bench and row both dumbbells. No load on the lower back.',alts:[]}],
+ carry:[{name:'Suitcase carry',start:10,f:1.2,cue:'One heavier dumbbell, switching hands each length. Stand tall without leaning to the side.'},
+   {name:'Farmer march',start:10,f:.8,cue:'A dumbbell in each hand. March on the spot, lifting each knee towards hip height, standing tall.'}],
+ curl:[{name:'Hammer curl',start:4,f:1,cue:'Palms facing each other. Curl up, then take two seconds to lower. Easy on the elbows.'},
+   {name:'Band biceps curl',unit:'bw',cue:'Stand on a resistance band and curl the handles up, then lower slowly.'}],
+ facepull:[{name:'Band pull-apart',cue:'Hold a band at shoulder height, arms straight. Pull it apart until it touches your chest and squeeze your shoulder blades.'},
+   {name:'Dumbbell reverse fly',unit:'kg',start:2,f:1,cue:'Sit on the end of a bench with your chest towards your knees. Raise light dumbbells out to the sides, thumbs up.',alts:[{for:'bone',name:'Band pull-apart',unit:'bw',cue:'Pull a band apart at shoulder height. No forward bend.'}]}],
+ stand:[{name:'Single-leg stand, eyes closed',cue:'Next to a wall. Lift one foot, then close your eyes and hold. Open them if you wobble.'},
+   {name:'Tandem stance',cue:'One foot directly in front of the other, then hold. Turn your head slowly to make it harder.'}],
+ rdl:[{name:'Kettlebell deadlift',start:12,f:1,cue:'Kettlebell between your feet. Push your hips back with a flat back, grip the handle and stand up by driving through your heels.'},
+   {name:'Single-leg Romanian deadlift',start:4,f:.4,each:true,cue:'Hold a support with one hand. Hinge on one leg with the other reaching back until you feel the back of your thigh. Keep a flat back.'}],
+ pulldown:[{name:'Neutral-grip pulldown',start:18,f:.9,cue:'Palms facing each other. Pull the bar to your upper chest, driving the elbows down.'},
+   {name:'Single-arm cable pulldown',start:8,f:.45,each:true,cue:'Kneel side-on to a high cable. Pull the handle down to your side, elbow towards your hip.'}],
+ ohp:[{name:'Arnold press',start:3,f:.8,cue:'Seated, dumbbells at shoulder height with palms facing you. Turn your palms forward as you press up.'},
+   {name:'Half-kneeling one-arm press',start:4,f:1,each:true,cue:'Kneel on one knee and hold a dumbbell on the same side as the knee down. Press straight up with your ribs down.'}],
+ split:[{name:'Reverse lunge',start:4,f:1,cue:'Step back and lower your back knee towards the floor, then push through the front foot to return. Hold a rack if you need balance.'},
+   {name:'Lateral lunge',start:2,f:.6,cue:'Step wide to one side and sit back into that hip, the other leg straight. Push back to the middle.'}],
+ deadbug:[{name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds.'},
+   {name:'Bent-knee dead bug',cue:'Lower back pressed down, knees bent at 90 degrees. Tap one heel to the floor at a time.'}],
+ pushdown:[{name:'Band pushdown',gym:0,unit:'bw',cue:'Anchor a band high on a door and push down until your arms are straight.'},
+   {name:'Close-grip push-up',gym:0,unit:'bw',cue:'Hands close together on a bench. Lower your chest with elbows tucked in, then press up.'}],
+ sideplank:[{name:'Side plank on knees',cue:'On your forearm with knees bent, lift your hips into a straight line from head to knees.'},
+   {name:'Standing side bend hold',cue:'Hold a dumbbell in one hand and stand tall without leaning towards it.'}],
+ tandem:[{name:'Heel-to-toe walk backwards',cue:'Walk 20 steps backwards along a line, toe touching heel. Stay next to a wall.'},
+   {name:'Single-leg stand',unit:'sec',lo:20,hi:30,each:true,cue:'Stand next to a wall. Lift one foot and hold. Turn your head slowly to make it harder.'}],
+ stepup:[{name:'Lateral step-up',start:2,f:.6,cue:'Stand side-on to a low step. Step up sideways, drive through the top foot, then step down slowly.'},
+   {name:'Step-down',unit:'bw',cue:'Stand on a low step. Slowly lower one heel to the floor, then push back up. Builds control for stairs.'}],
+ pushup:[{name:'Dumbbell floor press',unit:'kg',start:6,f:1,cue:'Lie on the floor, palms facing each other. Press up; the floor stops your elbows before the shoulder is stretched.'},
+   {name:'Band chest press',cue:'Band anchored behind you. Press forward, then return slowly.'}],
+ cablerow:[{name:'Single-arm cable row',start:10,f:.5,each:true,cue:'Stand side-on to a cable at chest height. Pull the handle to your side and squeeze your shoulder blade back.'},
+   {name:'Band seated row',gym:0,unit:'bw',cue:'Sit with your legs straight and a band around your feet. Pull the handles to your stomach and squeeze.'}],
+ thrust:[{name:'Glute bridge',start:8,f:.6,cue:'On your back, feet flat, dumbbell on the hips. Drive the hips up and pause for a second.'},
+   {name:'Single-leg glute bridge',unit:'bw',each:true,cue:'On your back with one foot on the floor and the other knee pulled in. Drive your hips up through the planted heel.'}],
+ pallof:[{name:'Half-kneeling Pallof press',cue:'Kneel on one knee side-on to a band or cable. Press it straight out and don’t let it twist you.'},
+   {name:'Bird dog',cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds.'}],
+ lateral:[{name:'Partial lateral raise',start:2,f:1,cue:'Raise light dumbbells to 45 degrees only, then lower slowly.'},
+   {name:'Cable lateral raise',gym:1,start:2,f:.6,each:true,cue:'Stand side-on to a low cable and raise the handle out to shoulder height.'}],
+ backext:[{name:'Bird dog',gym:0,cue:'On hands and knees, reach one arm and the opposite leg out and hold two seconds.'},
+   {name:'Floor back extension',gym:0,cue:'Lie face down with your arms by your sides. Lift your chest a few centimetres, hold two seconds and lower.'}],
+ calf:[{name:'Two-leg calf raise',cue:'Both feet on the floor. Rise slowly and take three seconds to lower.'},
+   {name:'Calf raise on a step',cue:'Balls of your feet on a step, heels hanging. Rise up, then lower your heels below the step slowly. Hold a rail.'}]};
+const blockNo=()=>state.history.length?Math.floor((trainingWeek()-1)/6):0;
+function pool(ex){ return [{...ex,slotId:ex.id,f:1,_pi:0},...(VAR[ex.id]||[]).map((v,k)=>({...ex,...v,alts:v.alts||ex.alts,slotId:ex.id,_pi:k+1}))]; }
+function usable(ex){ const H=state.hidden||[], home=state.equip==='home'; return pool(ex).filter(p=>!H.includes(p.name)&&!(home&&p.gym&&!p.alts.some(a=>a.for==='home'))); }
+function baseFor(ex){ const P=pool(ex), ok=usable(ex); if(P.length===1) return P[0]; if(!ok.length) return P[0];
+  const pick=(state.variety||{})[ex.id], b=blockNo();
+  if(pick&&pick.block===b){ const c=ok.find(p=>p._pi===pick.i); if(c) return c; }
+  const want=P[b%P.length]; return ok.find(p=>p._pi===want._pi)||ok[0]; }
+function findSlot(id){ for(const s of ORDER){ const e=PROGRAM[s].ex.find(x=>x.id===id); if(e) return e; } return null; }
+function relLast(ex){ const o=findSlot(ex.slotId); if(!o) return null;
+  for(const p of pool(o)){ if(p.name===ex.name||!(p.unit==='kg'||p.unit==='m')) continue; const L=state.last[p.name]; if(L&&L.w>0) return {w:L.w,u:L.u,name:p.name,f:(ex.f||.8)/(p.f||1)}; }
+  return null; }
+function newInBlock(){ if(!blockNo()) return 0; let n=0; ORDER.forEach(s=>exFor(s).forEach(e=>{ if(pool(e).length>1) n++; })); return n; }
 /* ---------- Helpers ---------- */
 const $ = s=>document.querySelector(s);
 const fmtDay = (t,o={weekday:'long',day:'numeric',month:'long'})=>new Date(t).toLocaleDateString('en-GB',o);
@@ -774,6 +837,7 @@ function recovery(){
   return {last:l, days, doneToday:days===0, ready:days>=2, next:nextLetter(l.s), nextDate:Math.max(T0,l.d+2*DAY)};
 }
 function resolve(ex){
+  ex=baseFor(ex);
   let idx=state.swaps[ex.id], auto=false, ck=false;
   const home=state.equip==='home', sore=(state.player&&state.player.sore)||{}, ok=a=>!(home&&a.gym);
   if(idx===undefined){ idx=-1;
@@ -808,8 +872,10 @@ function convW(w,from,to,step){ if(!w||from===to) return w; const v=from==='kg'?
 const fmtKg=kg=>U()==='lb'?`${Math.round(kg*2.20462/5)*5} lb`:`${kg} kg`;
 function suggest(ex){
   if(ex.unit==='min') return {w:0,r:ex.hi,text:state.hrMed?'Easy pace: about 4 to 5 out of 10 effort. You should be able to talk in full sentences.':`Easy pace. Aim for a pulse between ${Math.round(maxHR()*.6)} and ${Math.round(maxHR()*.7)} bpm.`};
-  const L0=state.last[ex.name], step=stepFor(ex), u=U(), st=convW(ex.start||0,'kg',u,step);
+  const L0=state.last[ex.name], step=stepFor(ex), u=U(), REL=!L0&&ex.slotId&&(ex.unit==='kg'||ex.unit==='m')?relLast(ex):null,
+    st=REL?Math.max(step,Math.round(convW(REL.w,REL.u||'kg',u,step)*REL.f/step)*step):convW(ex.start||0,'kg',u,step);
   const L=L0&&{...L0,w:convW(L0.w,L0.u||'kg',u,step)};
+  if(!L&&REL) return {w:st,r:ex.hi,text:`New exercise this block. Based on your ${REL.name}, start at ${st} ${u}${ex.unit==='m'?' per hand':''} and adjust after the first set.`};
   if(!L) return {w:st,r:ex.hi,text: ex.unit==='kg'||ex.unit==='m' ? `First time. Start at ${st} ${u}${ex.unit==='m'?' per hand':''} and pick a weight you could lift 2–3 more times.` : 'First time. Move slowly and stop 2–3 reps short of your limit.'};
   const all=L.r.every(x=>x>=ex.hi); const tot=L.r.reduce((a,b)=>a+b,0);
   const P=state.player;
@@ -888,7 +954,16 @@ ANIM['Hammer curl']=ANIM['Dumbbell biceps curl'];
 ANIM['Heel drops']=ANIM['Two-leg calf raise'];
 ANIM['Mini hops']={p:{},f:[{hip:[120,87],t:180,hn:[12,48],an:[122,165],af:[118,165]},{hip:[120,75],t:180,hn:[12,46],an:[123,153],af:[119,153]}]};
 ANIM['Small squat jumps']={p:{},f:[{hip:[104,116],t:158,hn:[24,30],an:[124,165],af:[118,165]},{hip:[120,76],t:180,hn:[8,50],an:[123,154],af:[119,154]}]};
+ANIM['Bent-over dumbbell row']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],an:[124,165],af:[118,165]},{hip:[106,86],t:112,hn:[-18,26],an:[124,165],af:[118,165]}]};
+ANIM['Dumbbell reverse fly']={p:{db:'both'},f:[{hip:[106,86],t:112,hn:[-3,50],an:[124,165],af:[118,165]},{hip:[106,86],t:112,hn:[8,10],an:[124,165],af:[118,165]}]};
+[['Dumbbell sumo squat','Goblet squat'],['Dumbbell front squat','Goblet squat'],['Alternating dumbbell bench press','Dumbbell bench press'],['Close-grip dumbbell press','Dumbbell bench press'],
+ ['Band biceps curl','Dumbbell biceps curl'],['Band pull-apart','Band face pull'],['Single-leg stand, eyes closed','Single-leg stand'],['Kettlebell deadlift','Romanian deadlift'],
+ ['Single-leg Romanian deadlift','Romanian deadlift'],['Single-arm cable pulldown','Lat pulldown'],['Arnold press','Seated shoulder press'],['Half-kneeling one-arm press','Seated shoulder press'],
+ ['Reverse lunge','Split squat'],['Lateral lunge','Split squat'],['Close-grip push-up','Incline push-up'],['Side plank on knees','Side plank'],['Heel-to-toe walk backwards','Heel-to-toe walk'],
+ ['Lateral step-up','Dumbbell step-up'],['Step-down','Low step-up'],['Single-arm cable row','Seated cable row'],['Single-leg glute bridge','Glute bridge'],['Half-kneeling Pallof press','Pallof press'],
+ ['Cable lateral raise','Lateral raise'],['Calf raise on a step','Two-leg calf raise']].forEach(([a,b])=>{ if(!ANIM[a]&&ANIM[b]) ANIM[a]=ANIM[b]; });
 ANIM['Brisk marching']={p:{},f:[{hip:[120,87],t:180,hn:[18,46],an:[140,134],af:[118,165]},{hip:[120,87],t:180,hn:[-8,48],an:[124,165],af:[136,136]}]};
+ANIM['Farmer march']={...ANIM['Brisk marching'],p:{db:'both'}};
 
 ANIM['Band seated row']={...ANIM['Seated cable row'],p:{box:[74,138,36,27],cable:[208,140,1],lines:[[180,165,186,138]]}};
 ANIM['Brisk walk']={p:{},loop:1,f:walk(16,[8,50])};
@@ -993,7 +1068,7 @@ function loop(now){
 function toggleAnim(el){const a=el._a;if(!a)return;a.paused=!a.paused;if(!a.paused){a.t0=performance.now()-a.at;if(!rafOn){rafOn=true;requestAnimationFrame(loop)}} const b=el.parentElement.querySelector('.demo-state');if(b)b.textContent=a.paused?'Paused. Tap to play':'Tap to pause';}
 const demoSvg=(name,cls='demo')=>ANIM[name]?`<button class="${cls}" data-act="toggleanim" aria-label="Animation showing ${name}. Tap to pause or play."><svg viewBox="0 -22 240 192" data-anim="${name}" role="img"></svg><span class="demo-state small">${REDUCED?'Paused. Tap to play':'Tap to pause'}</span></button>`:'';
 
-function findEx(name){for(const s of ORDER)for(const e of PROGRAM[s].ex){if(e.name===name)return {e,v:e};const a=e.alts.find(x=>x.name===name);if(a)return {e,v:{...e,...a}}}return null}
+function findEx(name){for(const s of ORDER)for(const e0 of PROGRAM[s].ex)for(const e of pool(e0)){if(e.name===name)return {e,v:e};const a=e.alts.find(x=>x.name===name);if(a)return {e,v:{...e,...a}}}return null}
 function demoSheet(name){
   const F=findEx(name); if(!F) return; const v=F.v, e=F.e, others=[e,...e.alts].filter(x=>x.name!==name);
   const steps=v.cue.split(/(?<=\.)\s+/);
@@ -1159,7 +1234,7 @@ function viewTodayInner(){
   const doneN=wk.done.length;
   const RDY=today&&!rec.doneToday?readiness():null;
   const banner=(RDY&&RDY.low?`<p class="coach rest"><b>Apple Health suggests an easier day.</b> ${RDY.bits.join(' and ').replace(/^./,c=>c.toUpperCase())}. The check-in will offer a light day.</p>`:'')+(isWelcomeBack()&&(today||!upcoming)?`<p class="coach rest"><b>Welcome back.</b> It\u2019s been ${rec.days} days. Your next training starts about 15% lighter, so joints and tendons can catch up.</p>`:'')
-    +(isDeloadWeek()?`<p class="coach rest"><b>Lighter week</b> (week ${trainingWeek()}). Same exercises at about 20% less weight. Every sixth week is lighter, so you keep progressing without wearing down.</p>`:'');
+    +(blockNo()>0&&trainingWeek()%6===1?`<p class="coach"><b>New block, week ${trainingWeek()}.</b> ${newInBlock()} exercises are fresh for the next six weeks. Same muscles, new movements, and weights start from what you lift now.</p>`:'')+(isDeloadWeek()?`<p class="coach rest"><b>Lighter week</b> (week ${trainingWeek()}). Same exercises at about 20% less weight. Every sixth week is lighter, so you keep progressing without wearing down.</p>`:'');
   return `
   <div class="stack"><span class="eyebrow">${fmtDay(T0)}</span><h1>${head}</h1>${coach}${banner}</div>
   <div class="card stack">
@@ -1304,9 +1379,10 @@ function viewWelcome(){
 }
 function viewProgram(){
   const cov=GROUPS.map(g=>`<tr><td>${g}</td>${ORDER.map(s=>{const hit=exFor(s).some(e=>e.m.includes(g));return `<td><span class="cdot ${hit?'':'no'}" aria-label="${hit?'Trained':'Not trained'}"></span></td>`}).join('')}</tr>`).join('');
-  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${e.alts.length?`${e.alts.length} alternative${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
+  const sessions=ORDER.map(s=>`<div class="card stack"><div class="row between"><h2>${TN(s)}</h2><span class="pill plain num">~${minutes(s)} min</span></div><p class="muted small">${PROGRAM[s].focus}</p>${bodyMap(trainingLoad(s),TN(s))}<ol class="exlist">${exFor(s).map((e,i)=>{const r=resolve(e);return `<li><span class="n">${i+1}</span><div><button class="exname" data-act="demo" data-name="${r.name}">${r.name}</button><div class="muted small">${pool(e).length>1?`Rotates by block: ${pool(e).map(p=>p.name).join(' \u2192 ')}`:e.alts.length?`${e.alts.length} gentler version${e.alts.length>1?'s':''}: ${e.alts.map(a=>a.name).join(', ')}`:'No swap needed'}</div></div><span class="sr num">${repLabel(r)}</span></li>`}).join('')}</ol></div>`).join('');
   return `
-  <div class="stack"><span class="eyebrow">Your program</span><h1>Three full-body sessions a week</h1>
+  <div class="stack"><span class="eyebrow">Your program \u00b7 Block ${blockNo()+1}</span><h1>Three full-body sessions a week</h1>
+  <p class="small muted">Block ${blockNo()+1} runs weeks ${blockNo()*6+1}\u2013${blockNo()*6+6}. A new block with fresh exercises starts after each lighter week.</p>
   <p>Every session trains the whole body, so missing one day never leaves a muscle group behind. Keep at least one rest day between sessions.</p></div>
   <div class="card stack"><h3>How it works</h3>
     <ol class="stack" style="margin:0;padding-left:1.2em">
@@ -1314,6 +1390,7 @@ function viewProgram(){
       <li>Hit the top of the rep range on every set, and the app adds weight next time.</li>
       <li>Every sixth week is lighter: same exercises, about 20% less weight. Joints and tendons catch up.</li>
       <li>Each session starts with a short bone burst and ends with balance work.</li>
+      <li>Every six weeks, after the lighter week, a new block brings fresh exercises for the same muscles. Tap Swap exercise to try another one sooner.</li>
       <li>Squeeze your pelvic floor before you lift or jump, and breathe out as you push.</li>
     </ol></div>
   ${sessions}
@@ -1447,6 +1524,7 @@ function viewProfile(){
   <div class="card stack"><h3>Session length</h3>${seg('length',[[20,'20 min'],[30,'30 min'],[45,'45 min'],[60,'60 min']])}<p class="muted small">${LENGTHS[state.length]}</p></div>
   <div class="card stack"><h3>Reminders</h3>${seg('notify',[['train','Training days'],['off','Off']])}<p class="muted small">One quiet reminder in the morning on training days. No streaks, no badges.</p></div>
   ${state.onboard?`<button class="btn primary" data-act="onboard-done">Show my plan</button>`:`<button class="btn ghost" data-act="welcome-show">Show the welcome screen</button>`}
+  ${(state.hidden||[]).length?`<div class="card stack"><h3>Hidden exercises</h3><p class="muted small">VitalHer won’t show these. Tap one to bring it back.</p><div class="row" style="flex-wrap:wrap;gap:8px">${state.hidden.map(n=>`<button class="pill plain" data-act="vunhide" data-n="${esc(n)}" style="padding:8px 12px;font-size:.85rem">${esc(n)} \u00d7</button>`).join('')}</div></div>`:''}
   ${subCard()}
   <div class="card stack"><h3>User Agreement</h3><p class="muted small">${termsOk()?`Version ${state.terms.version}, accepted on ${fmtDay(state.terms.at,{day:'numeric',month:'long',year:'numeric'})}.`:'Not yet accepted. You\u2019ll be asked before your first training.'}</p><button class="btn ghost" data-act="terms-view">Read the User Agreement</button>
     <p class="small" style="display:flex;gap:18px;flex-wrap:wrap"><a href="https://vidarmar.github.io/vitalher/privacy.html" target="_blank" rel="noopener">Privacy Policy</a><a href="https://vidarmar.github.io/vitalher/support.html" target="_blank" rel="noopener">Help and support</a></p></div>
@@ -1530,7 +1608,7 @@ function renderPlayerInner(){
       <div class="sets">${chips}</div>
       ${done?`<p class="muted">All sets done.</p>${(()=>{const nx=nextOpen(P); return nx>-1?`<button class="btn primary" data-act="nextex">Next: ${resolve(ex[nx]).name}</button>`:''})()}`:`<div class="steppers" style="${wBox?'':'grid-template-columns:1fr'}">${wBox}${rBox}</div>
       <button class="btn primary" data-act="log">${r.unit==='min'?'Log cardio':`Log set ${logs.length+1} of ${n}`}</button>`}
-      <div class="row between" style="flex-wrap:wrap;gap:4px 12px"><button class="btn link" data-act="swap" data-i="${i}">${e.alts.length?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="hurt" data-i="${i}">Something hurts?</button><button class="btn link" data-act="skip">Skip</button></div>
+      <div class="row between" style="flex-wrap:wrap;gap:4px 12px"><button class="btn link" data-act="swap" data-i="${i}">${baseFor(e).alts.length||pool(e).length>1?'Swap exercise':'No swap needed'}</button><button class="btn link" data-act="hurt" data-i="${i}">Something hurts?</button><button class="btn link" data-act="skip">Skip</button></div>
     </div></div>`;
   }).join('');
   const allDone=ex.every(e=>(P.logs[e.id]||[]).length>=setsFor(resolve(e)));
@@ -1608,11 +1686,16 @@ async function completeSession(effort){
 function sheet(html,center){const s=$('#sheet'); s.classList.toggle('center',!!center); s.innerHTML=`<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden=false; mountAnims(s); const b=s.querySelector('.btn,.opt'); b&&b.focus();}
 function closeSheet(){if(typeof mobStop==='function')mobStop(); if($('#sheet .blelist')&&NATIVE) nat('JarlHR','stopScan',{}).catch(()=>{});$('#sheet').hidden=true; $('#sheet').innerHTML='';}
 function swapSheet(i){
-  const P=state.player, e=exFor(P?P.s:currentS())[i], cur=resolve(e), curIdx=cur.alt?e.alts.findIndex(a=>a.name===cur.name):-1;
-  if(!e.alts.length){sheet(`<h2>${e.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
-  sheet(`<h2>Swap ${e.name.toLowerCase()}</h2><p class="muted">Same muscles, different stress on the joints.</p>
-   <button class="opt" data-act="pick" data-i="${i}" data-a="-1" aria-pressed="${curIdx===-1}"><b>${e.name}</b><span class="muted small">Standard version</span></button>
-   ${e.alts.map((a,k)=>`<button class="opt" data-act="pick" data-i="${i}" data-a="${k}" aria-pressed="${curIdx===k}"><span class="row between"><b>${a.name}</b><span class="pill">${JOINT[a.for]}</span></span><span class="small">${a.cue}</span></button>`).join('')}
+  const P=state.player, e=exFor(P?P.s:currentS())[i], b=baseFor(e), cur=resolve(e), curIdx=cur.alt?b.alts.findIndex(a=>a.name===cur.name):-1;
+  const others=usable(e).filter(p=>p.name!==b.name), canHide=usable(e).length>1;
+  if(!b.alts.length&&!others.length){sheet(`<h2>${b.name}</h2><p>This one is gentle on the joints already. If it still hurts, skip it today and tell us in the session feedback.</p><button class="btn ghost" data-act="closesheet">OK</button>`);return;}
+  sheet(`<h2>Swap ${b.name.toLowerCase()}</h2>
+   ${b.alts.length?`<h3>Gentler versions</h3><p class="muted small">Same muscles, less stress on the joints.</p>
+   <button class="opt" data-act="pick" data-i="${i}" data-a="-1" aria-pressed="${curIdx===-1}"><b>${b.name}</b><span class="muted small">Standard version</span></button>
+   ${b.alts.map((a,k)=>`<button class="opt" data-act="pick" data-i="${i}" data-a="${k}" aria-pressed="${curIdx===k}"><span class="row between"><b>${a.name}</b><span class="pill">${JOINT[a.for]}</span></span><span class="small">${a.cue}</span></button>`).join('')}`:''}
+   ${others.length?`<h3>Try something different</h3><p class="muted small">Other exercises for the same muscles. Your choice stays until the next block.</p>
+   ${others.map(o=>`<button class="opt" data-act="vpick" data-i="${i}" data-v="${o._pi}"><b>${o.name}</b><span class="small">${o.cue}</span></button>`).join('')}`:''}
+   ${canHide?`<button class="btn link" style="align-self:flex-start;color:var(--muted)" data-act="vhide" data-i="${i}">Don’t show me ${b.name.toLowerCase()} again</button>`:''}
    <button class="btn ghost" data-act="closesheet">Cancel</button>`);
 }
 let mob={i:-1,timer:null,left:0,side:1};
@@ -1655,6 +1738,7 @@ function mobTimer(){
 const WIDE=window.matchMedia('(min-width: 700px)');
 try{WIDE.addEventListener('change',()=>{ if(state.player) renderPlayer(); render(); })}catch(e){}
 function render(){
+  if(state.swapsBlock!==blockNo()){ state.swaps={}; state.swapsBlock=blockNo(); save(); }
   document.documentElement.dataset.scheme=state.scheme;
   document.documentElement.style.fontSize=(({m:100,l:112.5,xl:125}[state.textSize]||100)*(WIDE.matches?1.3:1))+'%';
   $('.tabs').hidden=state.welcome;
@@ -1740,6 +1824,9 @@ document.addEventListener('click',ev=>{
     case 'month': monthGo(); break;
     case 'plango': planGo(); break;
     case 'planuse': planUse(); break;
+    case 'vpick': {const e=exFor(P?P.s:currentS())[+t.dataset.i]; state.variety=state.variety||{}; state.variety[e.id]={i:+t.dataset.v,block:blockNo()}; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
+    case 'vhide': {const e=exFor(P?P.s:currentS())[+t.dataset.i], n=baseFor(e).name; state.hidden=[...new Set([...(state.hidden||[]),n])]; if(state.variety) delete state.variety[e.id]; delete state.swaps[e.id]; save(); closeSheet(); if(P) openEx(+t.dataset.i); else render(); break;}
+    case 'vunhide': state.hidden=(state.hidden||[]).filter(x=>x!==t.dataset.n); save(); render(); break;
     case 'moodgo': moodGo(t.dataset.s); break;
     case 'moodstart': {const ck={...MOOD.ck}; closeSheet(); startSession(t.dataset.s,ck); break;}
     case 'moodedit': checkinSheet(t.dataset.s,MOOD?MOOD.ck:null); break;
