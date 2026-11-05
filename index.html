@@ -498,8 +498,8 @@ function payHTML(){
     :`${sel.displayPrice} per ${perWord(sel)}, charged to your Apple ID when you confirm. Renews automatically until you cancel. Cancel at least 24 hours before the period ends in Settings, then your name, then Subscriptions.`;
   return `<span class="eyebrow">VitalHer Premium</span>
   <h2>${trial?`Train free for ${trial}`:'Keep training with VitalHer'}</h2>
-  <p>Every training, built around your joints and your pace.${trial?' You pay nothing until the trial ends, and you can cancel before then.':''}</p>
-  <ul class="paylist"><li>Your full plan, 2 to 6 days a week</li><li>Joint-friendly swaps, light days and a lighter week every sixth week</li><li>Live pulse from Apple Watch, with rest guided by your heart</li><li>Progress compared with men your age</li></ul>
+  <p>Every training, built around your body and how you feel today.${trial?' You pay nothing until the trial ends, and you can cancel before then.':''}</p>
+  <ul class="paylist"><li>Your full strength plan, 2 to 6 days a week, with bone bursts, balance and pelvic floor work</li><li>A check-in before every training that makes it lighter, cooler, calmer or stronger</li><li>Gentler swaps for knees, shoulders, back and spine</li><li>Your coach, live pulse and progress compared with women your age</li></ul>
   <div class="stack" role="group" aria-label="Choose a plan">${opt('yearly',y,save>0?`<span class="save">Save ${save}%</span>`:'')}${opt('monthly',m)}</div>
   ${STORE.msg?`<p class="small" style="color:var(--warn)"><b>${STORE.msg}</b></p>`:''}
   <button class="btn primary" data-act="pay-buy" ${STORE.busy?'disabled':''}>${STORE.busy?'One moment…':trial?'Start free trial':'Subscribe'}</button>
